@@ -1,0 +1,5 @@
+config.txt
+bot.log
+panel_password.txt
+__pycache__/
+*.pyc

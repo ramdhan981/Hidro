@@ -27,6 +27,7 @@ echo "[1/4] Install Python, requests & Termux tools..."
 pkg update -y -q 2>/dev/null
 pkg install python -y -q 2>/dev/null
 pkg install termux-tools -y -q 2>/dev/null
+pkg install curl -y -q 2>/dev/null
 pip install requests -q 2>/dev/null
 mkdir -p ~/owobot
 mkdir -p ~/.termux/boot
@@ -59,7 +60,7 @@ read -p "  Sudah matikan battery optimization? (Y/n, Enter=lanjut): " BATT
 if [ "$BATT" == "n" ] || [ "$BATT" == "N" ]; then
     echo ""
     echo "  ⚠️  Silakan matikan dulu agar bot tidak terhenti!"
-    echo "  Lanjutkan setup setelah itu dengan: bash ~/setup.sh"
+    echo "  Lanjutkan setup setelah itu dengan: bash ~/owobot/setup.sh"
     echo ""
     exit 1
 fi
@@ -197,44 +198,34 @@ else
     echo ""
 fi
 
-# Setup password panel web
-PANEL_PW_FILE=~/owobot/panel_password.txt
-OLD_PANEL_PW=""
-if [ -f "$PANEL_PW_FILE" ]; then
-    OLD_PANEL_PW=$(cat "$PANEL_PW_FILE")
-fi
-echo "🔒 Password untuk panel web (owoweb) — biar tidak sembarang orang di WiFi yang sama bisa pause/stop bot kamu."
-if [ -n "$OLD_PANEL_PW" ]; then
-    read -e -i "$OLD_PANEL_PW" -p "   Password panel (Enter=pakai yang lama): " PANEL_PW
-else
-    read -p "   Buat password panel (Enter=pakai default 'owobot123'): " PANEL_PW
-fi
-if [ -z "$PANEL_PW" ]; then
-    PANEL_PW="${OLD_PANEL_PW:-owobot123}"
-fi
-echo "$PANEL_PW" > "$PANEL_PW_FILE"
-echo "   ✅ Password panel: $PANEL_PW (dipakai saat buka owoweb)"
-echo ""
-echo "[4/4] Copy file owobot.py & stories.txt..."
-if [ -f /sdcard/Download/owobot.py ]; then
+echo "[4/4] Ambil owobot.py & stories.txt dari GitHub (ramdhan981/Hidro)..."
+GITHUB_USER="ramdhan981"
+GITHUB_REPO="Hidro"
+GITHUB_BRANCH="main"
+RAW_BASE="https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_REPO/$GITHUB_BRANCH"
+
+if curl -sL -f "$RAW_BASE/owobot.py" -o ~/owobot/owobot.py 2>/dev/null; then
+    echo "      ✅ owobot.py diambil dari GitHub!"
+elif [ -f /sdcard/Download/owobot.py ]; then
     cp /sdcard/Download/owobot.py ~/owobot/owobot.py
-    echo "      owobot.py ditemukan & disalin!"
+    echo "      owobot.py diambil dari Download (GitHub gagal/offline)"
 elif [ -f ~/owobot/owobot.py ]; then
-    echo "      owobot.py sudah ada!"
+    echo "      owobot.py pakai yang sudah ada"
 else
     echo ""
-    echo "  ⚠️  File owobot.py tidak ditemukan!"
-    echo "  Download owobot.py lalu kirim ke /sdcard/Download/"
-    echo "  Lalu jalankan lagi: bash ~/setup.sh"
+    echo "  ⚠️  owobot.py tidak ditemukan (GitHub gagal & tidak ada di Download)!"
+    echo "  Cek koneksi internet, atau taruh manual di /sdcard/Download/"
     echo ""
     exit 1
 fi
 
-if [ -f /sdcard/Download/stories.txt ]; then
+if curl -sL -f "$RAW_BASE/stories.txt" -o ~/owobot/stories.txt 2>/dev/null; then
+    echo "      ✅ stories.txt diambil dari GitHub!"
+elif [ -f /sdcard/Download/stories.txt ]; then
     cp /sdcard/Download/stories.txt ~/owobot/stories.txt
-    echo "      stories.txt ditemukan & disalin!"
+    echo "      stories.txt diambil dari Download (GitHub gagal/offline)"
 elif [ -f ~/owobot/stories.txt ]; then
-    echo "      stories.txt sudah ada!"
+    echo "      stories.txt pakai yang sudah ada"
 else
     echo "      ⚠️  stories.txt tidak ditemukan, bot akan pakai 2 cerita default saja."
 fi
@@ -245,12 +236,16 @@ mkdir -p "$BIN_DIR"
 
 cat > "$BIN_DIR/owo" << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
-bash ~/setup.sh
+mkdir -p ~/owobot
+curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh" -o ~/owobot/setup.sh 2>/dev/null
+bash ~/owobot/setup.sh
 EOF
 
 cat > "$BIN_DIR/owostart" << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
-bash ~/setup.sh start
+mkdir -p ~/owobot
+curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh" -o ~/owobot/setup.sh 2>/dev/null
+bash ~/owobot/setup.sh start
 EOF
 
 cat > "$BIN_DIR/owolog" << 'EOF'
@@ -271,11 +266,6 @@ EOF
 
 cat > "$BIN_DIR/owoweb" << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
-if [ -f ~/owobot/panel_password.txt ]; then
-    echo "🔒 Password panel: $(cat ~/owobot/panel_password.txt)"
-else
-    echo "🔒 Password panel: owobot123 (default)"
-fi
 am start -a android.intent.action.VIEW -d http://127.0.0.1:8765/
 EOF
 

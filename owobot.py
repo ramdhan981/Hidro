@@ -1,5 +1,4 @@
 import json
-import base64
 import os
 import requests
 import time
@@ -35,19 +34,6 @@ GEM_CODES = {
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 STORIES_FILE = os.path.join(SCRIPT_DIR, "stories.txt")
-PANEL_PASSWORD_FILE = os.path.join(SCRIPT_DIR, "panel_password.txt")
-
-def get_panel_password():
-    try:
-        with open(PANEL_PASSWORD_FILE, "r", encoding="utf-8") as f:
-            pw = f.read().strip()
-            if pw:
-                return pw
-    except FileNotFoundError:
-        pass
-    return "owobot123"
-
-PANEL_PASSWORD = get_panel_password()
 
 def load_stories():
     default_stories = [
@@ -113,29 +99,6 @@ def build_status_payload():
 
 
 class OwoStatusHandler(BaseHTTPRequestHandler):
-    def _check_auth(self):
-        auth = self.headers.get("Authorization")
-        if auth:
-            try:
-                scheme, creds = auth.split(" ", 1)
-                if scheme == "Basic":
-                    decoded = base64.b64decode(creds).decode("utf-8")
-                    _, _, pw = decoded.partition(":")
-                    if pw == PANEL_PASSWORD:
-                        return True
-            except Exception:
-                pass
-        return False
-
-    def _require_auth(self):
-        body = b"Password salah atau belum diisi."
-        self.send_response(401)
-        self.send_header("WWW-Authenticate", 'Basic realm="OWO Bot Panel"')
-        self.send_header("Content-Type", "text/plain")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
     def _send(self, payload, status=200, content_type="application/json"):
         body = payload.encode("utf-8")
         self.send_response(status)
@@ -146,10 +109,6 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if not self._check_auth():
-            self._require_auth()
-            return
-
         if self.path == "/api/status":
             self._send(json.dumps(build_status_payload()))
             return
@@ -275,10 +234,6 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
         self._send("Not found", status=404, content_type="text/plain; charset=utf-8")
 
     def do_POST(self):
-        if not self._check_auth():
-            self._require_auth()
-            return
-
         if self.path == "/api/command":
             length = int(self.headers.get("Content-Length", "0"))
             body = self.rfile.read(length).decode("utf-8", "ignore")

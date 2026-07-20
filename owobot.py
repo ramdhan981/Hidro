@@ -845,10 +845,11 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         send_webhook()
         time.sleep(2)
 
-    def system_pause(seconds, label_text="Waiting", send_story=False):
+    def system_pause(seconds, label_text="Waiting", send_story=False, show_status=True):
         remaining = int(seconds)
         total_secs = remaining
-        state["pause_status"] = f"⏸️ {label_text}"
+        if show_status:
+            state["pause_status"] = f"⏸️ {label_text}"
         while remaining > 0:
             if shutdown_event.is_set():
                 return
@@ -957,24 +958,23 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
             send_webhook()
 
-            if state.get("total_actions", 0) >= 180:
-                break_minutes = round(random.uniform(7, 15), 1)
+            if state.get("total_actions", 0) >= 200:
+                break_minutes = round(random.uniform(10, 17), 1)
                 break_secs = int(break_minutes * 60)
                 log(f"☕ Long Break ({break_minutes} menit)...")
                 send_webhook()
-                system_pause(break_secs, "LONG BREAK", send_story=True)
+                system_pause(break_secs, "LONG BREAK", send_story=False)
                 state["total_actions"] = 0
             else:
-                pause_secs = round(random.uniform(11.8, 15), 1)
-                state["pause_status"] = f"⏸️ Jeda {pause_secs} detik..."
-                system_pause(pause_secs, "Jeda H+B")
+                pause_secs = round(random.uniform(12, 16), 1)
+                system_pause(pause_secs, "Jeda H+B", show_status=False)
 
             if state["grand_total"] % 20 == 0 and state["grand_total"] > 0:
                 log("🎒 Cek inventory rutin (setiap 20 H+B)...")
                 send_webhook()
                 state["gems_need"] = list(GEM_CODES.keys())
                 get_inventory_and_equip(force=True)
-                system_pause(random.randint(5, 8), "Jeda Inventory")
+                system_pause(random.randint(5, 8), "Jeda Inventory", show_status=False)
 
             auto_pray()
             auto_vote()
@@ -1160,9 +1160,9 @@ if not semua_valid:
 print("=" * 55)
 print(f"  OWO BOT — {len(accounts)} Akun Terdeteksi")
 print("=" * 55)
-print("  • Jeda H+B   : 11.5-16 detik (random)")
+print("  • Jeda H+B   : 12-16 detik (random)")
 print("  • Cek Gem    : Setiap 20 H+B")
-print("  • Long Break : 7-15 menit acak (tiap 180 H+B), kirim cerita tiap 1 menit")
+print("  • Long Break : 10-17 menit acak (tiap 200 H+B), tidak kirim cerita saat break")
 print("  • .stopbot / .startbot di Discord (per akun)")
 print("  • .testalert di Discord untuk tes notifikasi captcha (per akun)")
 print("  • .stopbot / .startbot / exit di terminal (semua akun)")

@@ -1013,12 +1013,12 @@ def interactive_config():
     print("\n" + "=" * 58)
     print("   OWO BOT - KONFIGURASI AKUN")
     print("=" * 58)
-    print("Isi data akun Discord Anda (maksimal 5 akun)")
+    print("Isi data akun Discord Anda (maksimal 6 akun)")
     print("⚠️ AKUN 1 WAJIB DIISI LENGKAP! Jika ingin skip, tekan Ctrl+C.\n")
 
     accounts = []
     
-    for i in range(1, 6):
+    for i in range(1, 7):
         print(f"\n{'='*58}")
         if i == 1:
             print(f"--- AKUN {i} (WAJIB) ---")
@@ -1104,10 +1104,10 @@ if not accounts:
         print(f"❌ Gagal menyimpan config: {e}")
         sys.exit(1)
 
-# Batasi maksimal 5 akun
-if len(accounts) > 5:
-    print(f"[PERINGATAN] Ditemukan {len(accounts)} akun di config.txt, hanya 5 pertama yang akan dipakai.")
-accounts = accounts[:5]
+# Batasi maksimal 6 akun
+if len(accounts) > 6:
+    print(f"[PERINGATAN] Ditemukan {len(accounts)} akun di config.txt, hanya 6 pertama yang akan dipakai.")
+accounts = accounts[:6]
 
 # ============================================================
 # VALIDASI KRITIS: Akun pertama WAJIB ada dan token tidak boleh kosong

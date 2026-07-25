@@ -136,7 +136,7 @@ if [ "$SKIP_CONFIG" != "true" ]; then
     > ~/owobot/config.txt
     AKUN_TERSIMPAN=0
 
-    for AKUN_KE in 1 2 3 4 5; do
+    for AKUN_KE in 1 2 3 4 5 6; do
         HAS_OLD=false
         if [ $AKUN_KE -le $AKUN_LAMA ] && [ -n "${OLD_TOKEN[$AKUN_KE]}" ]; then
             HAS_OLD=true

@@ -198,6 +198,35 @@ else
     echo ""
 fi
 
+# Pengaturan bot (prefix, jeda H+B, long break)
+SETTINGS_FILE=~/owobot/settings.txt
+declare -A OLD_SET
+if [ -f "$SETTINGS_FILE" ]; then
+    while IFS='=' read -r k v; do
+        [ -z "$k" ] && continue
+        OLD_SET["$k"]="$v"
+    done < "$SETTINGS_FILE"
+fi
+
+echo "⚙️  Pengaturan Bot"
+read -e -i "${OLD_SET[PREFIX]:-owo}" -p "   Prefix command (misal 'owo'): " SET_PREFIX
+read -e -i "${OLD_SET[JEDA_MIN]:-12}" -p "   Jeda H+B minimal (detik): " SET_JEDA_MIN
+read -e -i "${OLD_SET[JEDA_MAX]:-16}" -p "   Jeda H+B maksimal (detik): " SET_JEDA_MAX
+read -e -i "${OLD_SET[LONG_BREAK_TRIGGER]:-200}" -p "   Long break setiap berapa H+B: " SET_LB_TRIGGER
+read -e -i "${OLD_SET[LONG_BREAK_MIN]:-10}" -p "   Long break minimal (menit): " SET_LB_MIN
+read -e -i "${OLD_SET[LONG_BREAK_MAX]:-17}" -p "   Long break maksimal (menit): " SET_LB_MAX
+
+cat > "$SETTINGS_FILE" << SETEOF
+PREFIX=${SET_PREFIX:-owo}
+JEDA_MIN=${SET_JEDA_MIN:-12}
+JEDA_MAX=${SET_JEDA_MAX:-16}
+LONG_BREAK_TRIGGER=${SET_LB_TRIGGER:-200}
+LONG_BREAK_MIN=${SET_LB_MIN:-10}
+LONG_BREAK_MAX=${SET_LB_MAX:-17}
+SETEOF
+echo "   ✅ Pengaturan tersimpan!"
+echo ""
+
 echo "[4/4] Ambil owobot.py & stories.txt dari GitHub (ramdhan981/Hidro)..."
 GITHUB_USER="ramdhan981"
 GITHUB_REPO="Hidro"

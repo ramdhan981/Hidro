@@ -51,6 +51,40 @@ def load_stories():
 
 stories = load_stories()
 
+SETTINGS_FILE = os.path.join(SCRIPT_DIR, "settings.txt")
+
+def load_settings():
+    defaults = {
+        "PREFIX": "owo",
+        "JEDA_MIN": "12",
+        "JEDA_MAX": "16",
+        "LONG_BREAK_TRIGGER": "200",
+        "LONG_BREAK_MIN": "10",
+        "LONG_BREAK_MAX": "17",
+    }
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                key = key.strip().upper()
+                val = val.strip()
+                if key in defaults and val:
+                    defaults[key] = val
+    except FileNotFoundError:
+        pass
+    return defaults
+
+SETTINGS = load_settings()
+PREFIX = SETTINGS["PREFIX"]
+JEDA_MIN = float(SETTINGS["JEDA_MIN"])
+JEDA_MAX = float(SETTINGS["JEDA_MAX"])
+LONG_BREAK_TRIGGER = int(SETTINGS["LONG_BREAK_TRIGGER"])
+LONG_BREAK_MIN = float(SETTINGS["LONG_BREAK_MIN"])
+LONG_BREAK_MAX = float(SETTINGS["LONG_BREAK_MAX"])
+
 # ============================================================
 # Dashboard terminal (status board ringkas, terpisah dari webhook)
 # ============================================================
@@ -694,7 +728,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
         before_id = get_last_msg_id()
         time.sleep(random.uniform(1, 2))
-        safe_request("POST", URL, json={"content": "owo inv"}, headers=headers)
+        safe_request("POST", URL, json={"content": f"{PREFIX} inv"}, headers=headers)
 
         inv_text = ""
         deadline = time.time() + 10
@@ -744,7 +778,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
         if state["gems_use"].strip():
             time.sleep(random.uniform(1, 2))
-            cmd = f"owo use {state['gems_use'].strip()}"
+            cmd = f"{PREFIX} use {state['gems_use'].strip()}"
             safe_request("POST", URL, json={"content": cmd}, headers=headers)
             log(f"💎 {cmd}")
             time.sleep(3)
@@ -789,7 +823,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 return
         before_id = get_last_msg_id()
         time.sleep(random.uniform(0.5, 1))
-        safe_request("POST", URL, json={"content": "owo pray"}, headers=headers)
+        safe_request("POST", URL, json={"content": f"{PREFIX} pray"}, headers=headers)
         state["last_pray_time"] = datetime.now()
         time.sleep(2)
         resp = get_owo_response(before_id, timeout=5)
@@ -809,7 +843,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 return
         before_id = get_last_msg_id()
         time.sleep(random.uniform(1, 2))
-        safe_request("POST", URL, json={"content": "owo vote"}, headers=headers)
+        safe_request("POST", URL, json={"content": f"{PREFIX} vote"}, headers=headers)
         time.sleep(3)
         resp = get_owo_response(before_id, timeout=6)
         state["last_vote_time"] = datetime.now()
@@ -831,7 +865,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             return
         before_id = get_last_msg_id()
         time.sleep(random.uniform(1, 2))
-        safe_request("POST", URL, json={"content": "owo daily"}, headers=headers)
+        safe_request("POST", URL, json={"content": f"{PREFIX} daily"}, headers=headers)
         time.sleep(3)
         resp = get_owo_response(before_id, timeout=6)
         state["daily_done"] = True
@@ -934,9 +968,9 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
             before_id = get_last_msg_id()
 
-            safe_request("POST", URL, json={"content": "owo hunt"}, headers=headers)
+            safe_request("POST", URL, json={"content": f"{PREFIX} hunt"}, headers=headers)
             time.sleep(random.uniform(0.5, 1))
-            safe_request("POST", URL, json={"content": "owo battle"}, headers=headers)
+            safe_request("POST", URL, json={"content": f"{PREFIX} battle"}, headers=headers)
 
             state["hunt_count"] += 1
             state["battle_count"] += 1
@@ -958,15 +992,15 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
             send_webhook()
 
-            if state.get("total_actions", 0) >= 200:
-                break_minutes = round(random.uniform(10, 17), 1)
+            if state.get("total_actions", 0) >= LONG_BREAK_TRIGGER:
+                break_minutes = round(random.uniform(LONG_BREAK_MIN, LONG_BREAK_MAX), 1)
                 break_secs = int(break_minutes * 60)
                 log(f"☕ Long Break ({break_minutes} menit)...")
                 send_webhook()
                 system_pause(break_secs, "LONG BREAK", send_story=False)
                 state["total_actions"] = 0
             else:
-                pause_secs = round(random.uniform(12, 16), 1)
+                pause_secs = round(random.uniform(JEDA_MIN, JEDA_MAX), 1)
                 system_pause(pause_secs, "Jeda H+B", show_status=False)
 
             if state["grand_total"] % 20 == 0 and state["grand_total"] > 0:
@@ -1162,7 +1196,9 @@ print(f"  OWO BOT — {len(accounts)} Akun Terdeteksi")
 print("=" * 55)
 print("  • Jeda H+B   : 12-16 detik (random)")
 print("  • Cek Gem    : Setiap 20 H+B")
-print("  • Long Break : 10-17 menit acak (tiap 200 H+B), tidak kirim cerita saat break")
+print(f"  • Prefix     : {PREFIX}")
+print(f"  • Jeda H+B   : {JEDA_MIN}-{JEDA_MAX} detik acak")
+print(f"  • Long Break : {LONG_BREAK_MIN}-{LONG_BREAK_MAX} menit acak (tiap {LONG_BREAK_TRIGGER} H+B), tidak kirim cerita saat break")
 print("  • .stopbot / .startbot di Discord (per akun)")
 print("  • .testalert di Discord untuk tes notifikasi captcha (per akun)")
 print("  • .stopbot / .startbot / exit di terminal (semua akun)")

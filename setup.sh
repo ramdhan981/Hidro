@@ -227,7 +227,7 @@ SETEOF
 echo "   ✅ Pengaturan tersimpan!"
 echo ""
 
-echo "[4/4] Ambil owobot.py & stories.txt dari GitHub (ramdhan981/Hidro)..."
+echo "[4/4] Ambil owobot.py, webpanel.py, webhook_utils.py & stories.txt dari GitHub (ramdhan981/Hidro)..."
 GITHUB_USER="ramdhan981"
 GITHUB_REPO="Hidro"
 GITHUB_BRANCH="main"
@@ -243,6 +243,36 @@ elif [ -f ~/owobot/owobot.py ]; then
 else
     echo ""
     echo "  ⚠️  owobot.py tidak ditemukan (GitHub gagal & tidak ada di Download)!"
+    echo "  Cek koneksi internet, atau taruh manual di /sdcard/Download/"
+    echo ""
+    exit 1
+fi
+
+if curl -sL -f "$RAW_BASE/webpanel.py" -o ~/owobot/webpanel.py 2>/dev/null; then
+    echo "      ✅ webpanel.py diambil dari GitHub!"
+elif [ -f /sdcard/Download/webpanel.py ]; then
+    cp /sdcard/Download/webpanel.py ~/owobot/webpanel.py
+    echo "      webpanel.py diambil dari Download (GitHub gagal/offline)"
+elif [ -f ~/owobot/webpanel.py ]; then
+    echo "      webpanel.py pakai yang sudah ada"
+else
+    echo ""
+    echo "  ⚠️  webpanel.py tidak ditemukan! Bot butuh file ini untuk jalan."
+    echo "  Cek koneksi internet, atau taruh manual di /sdcard/Download/"
+    echo ""
+    exit 1
+fi
+
+if curl -sL -f "$RAW_BASE/webhook_utils.py" -o ~/owobot/webhook_utils.py 2>/dev/null; then
+    echo "      ✅ webhook_utils.py diambil dari GitHub!"
+elif [ -f /sdcard/Download/webhook_utils.py ]; then
+    cp /sdcard/Download/webhook_utils.py ~/owobot/webhook_utils.py
+    echo "      webhook_utils.py diambil dari Download (GitHub gagal/offline)"
+elif [ -f ~/owobot/webhook_utils.py ]; then
+    echo "      webhook_utils.py pakai yang sudah ada"
+else
+    echo ""
+    echo "  ⚠️  webhook_utils.py tidak ditemukan! Bot butuh file ini untuk jalan."
     echo "  Cek koneksi internet, atau taruh manual di /sdcard/Download/"
     echo ""
     exit 1

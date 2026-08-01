@@ -1,4 +1,3 @@
-import json
 import os
 import requests
 import time
@@ -7,7 +6,6 @@ import sys
 import re
 import threading
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HUMAN_KEYWORDS = [
     "are you human", "captcha", "verify", "human verification",
@@ -86,271 +84,14 @@ LONG_BREAK_MIN = float(SETTINGS["LONG_BREAK_MIN"])
 LONG_BREAK_MAX = float(SETTINGS["LONG_BREAK_MAX"])
 
 # ============================================================
-# Dashboard terminal (status board ringkas, terpisah dari webhook)
+# Web panel (owoweb) & webhook Discord — dipindah ke file terpisah
 # ============================================================
-dashboard_lock = threading.Lock()
-all_accounts_state = {}
-shutdown_event = threading.Event()
-panel_server = None
+from webpanel import dashboard_lock, all_accounts_state, shutdown_event, start_web_panel
+import webhook_utils
 
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.txt")
 if not os.path.exists(CONFIG_PATH):
     CONFIG_PATH = os.path.join(os.path.expanduser("~"), "owobot", "config.txt")
-
-
-def build_status_payload():
-    with dashboard_lock:
-        items = sorted(all_accounts_state.items())
-
-    accounts = []
-    for acc_id, info in items:
-        state = info["state"]
-        elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
-        gem_text = ", ".join(
-            f"{g}:{v}" for g, v in state["gem_counter_state"].items()
-        ) or "Belum terdeteksi"
-        accounts.append({
-            "id": acc_id,
-            "label": info["label"],
-            "profile_name": info["profile_name"],
-            "status": state["pause_status"],
-            "grand_total": state["grand_total"],
-            "hunt_count": state["hunt_count"],
-            "battle_count": state["battle_count"],
-            "runtime": elapsed,
-            "gems": gem_text,
-            "vote": state["vote_status"],
-            "pray": state["pray_status"],
-            "daily": state["daily_status"],
-            "logs": state["action_log"][-4:] or ["Belum ada aksi..."],
-        })
-
-    return {
-        "running": not shutdown_event.is_set(),
-        "timestamp": datetime.now().strftime("%H:%M:%S"),
-        "accounts": accounts,
-    }
-
-
-class OwoStatusHandler(BaseHTTPRequestHandler):
-    def _send(self, payload, status=200, content_type="application/json"):
-        body = payload.encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(body)
-
-    def do_GET(self):
-        if self.path == "/api/status":
-            self._send(json.dumps(build_status_payload()))
-            return
-
-        if self.path == "/":
-            html = """
-            <!doctype html>
-            <html lang=\"id\">
-            <head>
-              <meta charset=\"utf-8\">
-              <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
-              <title>OWO Bot Status</title>
-              <style>
-                body { font-family: Arial, sans-serif; margin: 0; background: #0f172a; color: #f8fafc; }
-                .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-                .card { background: #111827; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-                .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-                .btn { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; margin: 4px; font-size: 0.9em; }
-                .btn.secondary { background: #475569; }
-                .btn.danger { background: #dc2626; }
-                .btn.small { padding: 6px 10px; font-size: 0.8em; }
-                .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-                .small { color: #94a3b8; font-size: 0.92em; }
-                pre { background: #020617; padding: 10px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; }
-                .status-ok { color: #4ade80; }
-                .status-warn { color: #fbbf24; }
-                .btn-group { display: flex; gap: 4px; flex-wrap: wrap; }
-                .acc-summary { padding: 8px; background: #1e293b; border-radius: 8px; margin-bottom: 8px; }
-              </style>
-            </head>
-            <body>
-              <div class=\"wrap\">
-                <div class=\"card\">
-                  <div class=\"top\">
-                    <div>
-                      <h2 style=\"margin:0\">OWO Bot Status Panel</h2>
-                      <div class=\"small\">Private local panel — only accessible on this computer via localhost</div>
-                    </div>
-                    <div>
-                      <button class=\"btn secondary\" onclick=\"sendCommand('pause', null)\">⏸️ Pause Semua</button>
-                      <button class=\"btn\" onclick=\"sendCommand('resume', null)\">▶️ Resume Semua</button>
-                      <button class=\"btn danger\" onclick=\"sendCommand('stop', null)\">⛔ Stop Semua</button>
-                    </div>
-                  </div>
-                </div>
-                <div class=\"card\">
-                  <h3 style=\"margin-top:0\">Status Bot</h3>
-                  <div id=\"summary\">Memuat...</div>
-                </div>
-                <div id=\"accounts\"></div>
-              </div>
-              <script>
-                function escapeHtml(value) {
-                  return String(value)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/\"/g, '&quot;');
-                }
-                async function loadStatus() {
-                  try {
-                    const res = await fetch('/api/status');
-                    const data = await res.json();
-                    const summary = document.getElementById('summary');
-                    summary.innerHTML = '<strong>Status:</strong> ' + (data.running ? '<span class=\"status-ok\">Berjalan</span>' : '<span class=\"status-warn\">Dihentikan</span>') + ' <span class=\"small\">• Total Akun: ' + data.accounts.length + ' • Terakhir diperbarui ' + data.timestamp + '</span>';
-                    const accounts = document.getElementById('accounts');
-                    if (!data.accounts.length) {
-                      accounts.innerHTML = '<div class=\"card\"><strong>Belum ada akun aktif.</strong></div>';
-                      return;
-                    }
-                    accounts.innerHTML = data.accounts.map(acc => `
-                      <div class=\"card\">
-                        <div style=\"display: flex; justify-content: space-between; align-items: start; gap: 12px;\">
-                          <div style=\"flex: 1;\">
-                            <h4 style=\"margin-top:0;margin-bottom:8px\">${escapeHtml(acc.label)} — ${escapeHtml(acc.profile_name)}</h4>
-                            <div class=\"grid\">
-                              <div><strong>Status</strong><br>${escapeHtml(acc.status)}</div>
-                              <div><strong>H+B</strong><br>${escapeHtml(acc.grand_total)}</div>
-                              <div><strong>Hunt</strong><br>${escapeHtml(acc.hunt_count)}</div>
-                              <div><strong>Battle</strong><br>${escapeHtml(acc.battle_count)}</div>
-                            </div>
-                            <div class=\"small\" style=\"margin-top:8px\">Runtime: ${escapeHtml(acc.runtime)}</div>
-                            <div class=\"small\">Gem: ${escapeHtml(acc.gems)}</div>
-                            <div class=\"small\">Vote: ${escapeHtml(acc.vote)}</div>
-                            <div class=\"small\">Pray: ${escapeHtml(acc.pray)}</div>
-                            <div class=\"small\">Daily: ${escapeHtml(acc.daily)}</div>
-                            <pre>${escapeHtml(acc.logs.join('\\n'))}</pre>
-                          </div>
-                          <div style=\"min-width: 120px;\">
-                            <div class=\"btn-group\" style=\"flex-direction: column;\">
-                              <button class=\"btn secondary btn-small\" onclick=\"sendCommand('pause', ${acc.id})\">⏸️ Pause</button>
-                              <button class=\"btn btn-small\" onclick=\"sendCommand('resume', ${acc.id})\">▶️ Resume</button>
-                              <button class=\"btn danger btn-small\" onclick=\"sendCommand('stop', ${acc.id})\">⛔ Stop</button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    `).join('');
-                  } catch (err) {
-                    document.getElementById('summary').innerHTML = '<span class=\"status-warn\">Gagal memuat status. Coba refresh.</span>';
-                    console.error(err);
-                  }
-                }
-                async function sendCommand(action, accId) {
-                  try {
-                    const payload = {action: action};
-                    if (accId !== null) payload.acc_id = accId;
-                    await fetch('/api/command', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-                    await loadStatus();
-                  } catch (err) {
-                    console.error(err);
-                  }
-                }
-                setInterval(loadStatus, 2000);
-                loadStatus();
-              </script>
-            </body>
-            </html>
-            """
-            self._send(html, content_type="text/html; charset=utf-8")
-            return
-
-        self._send("Not found", status=404, content_type="text/plain; charset=utf-8")
-
-    def do_POST(self):
-        if self.path == "/api/command":
-            length = int(self.headers.get("Content-Length", "0"))
-            body = self.rfile.read(length).decode("utf-8", "ignore")
-            try:
-                data = json.loads(body) if body else {}
-            except Exception:
-                data = {}
-
-            action = (data.get("action") or "").lower()
-            acc_id = data.get("acc_id")  # Akun ID untuk kontrol per akun
-
-            if action == "pause":
-                with dashboard_lock:
-                    if acc_id:
-                        # Pause satu akun
-                        if acc_id in all_accounts_state:
-                            st = all_accounts_state[acc_id]["state"]
-                            st["is_paused"] = True
-                            st["pause_status"] = "⏸️ Pause"
-                            st["embed_color"] = 0xFF0000
-                    else:
-                        # Pause semua akun
-                        for info in all_accounts_state.values():
-                            st = info["state"]
-                            st["is_paused"] = True
-                            st["pause_status"] = "⏸️ Pause"
-                            st["embed_color"] = 0xFF0000
-            elif action == "resume":
-                with dashboard_lock:
-                    if acc_id:
-                        # Resume satu akun
-                        if acc_id in all_accounts_state:
-                            st = all_accounts_state[acc_id]["state"]
-                            st["is_paused"] = False
-                            st["pause_status"] = "🟢 Aktif"
-                            st["embed_color"] = 0x57F287
-                    else:
-                        # Resume semua akun
-                        for info in all_accounts_state.values():
-                            st = info["state"]
-                            st["is_paused"] = False
-                            st["pause_status"] = "🟢 Aktif"
-                            st["embed_color"] = 0x57F287
-            elif action == "stop":
-                if acc_id:
-                    # Stop satu akun (tandai untuk dihentikan)
-                    with dashboard_lock:
-                        if acc_id in all_accounts_state:
-                            st = all_accounts_state[acc_id]["state"]
-                            st["is_paused"] = True
-                            st["pause_status"] = "⛔ Bot telah dihentikan"
-                            st["embed_color"] = 0xFF0000
-                else:
-                    # Stop semua
-                    with dashboard_lock:
-                        for info in all_accounts_state.values():
-                            st = info["state"]
-                            st["pause_status"] = "⛔ Bot telah dihentikan"
-                            st["embed_color"] = 0xFF0000
-                    shutdown_event.set()
-
-            self._send(json.dumps({"ok": True, "action": action, "acc_id": acc_id}))
-            return
-
-        self._send("Bad request", status=400, content_type="text/plain; charset=utf-8")
-
-    def log_message(self, format, *args):
-        return
-
-
-def start_web_panel(port=8765):
-    global panel_server
-    try:
-        panel_server = ThreadingHTTPServer(("0.0.0.0", port), OwoStatusHandler)
-        panel_server.daemon_threads = True
-        thread = threading.Thread(target=panel_server.serve_forever, daemon=True)
-        thread.start()
-        print(f"[WEB] Panel status siap di http://0.0.0.0:{port}/")
-        print(f"[WEB] Buka lewat IP lokal Anda, misalnya http://<IP-TERMUX>:{port}/")
-        return True
-    except OSError as exc:
-        print(f"[WEB] Gagal start panel status: {exc}")
-        return False
 
 
 def render_dashboard():
@@ -386,6 +127,7 @@ def render_dashboard():
         lines.append(f"  Vote       : {state['vote_status']}")
         lines.append(f"  Pray       : {state['pray_status']}")
         lines.append(f"  Daily      : {state['daily_status']}")
+        lines.append(f"  Cash       : {state['cash_status']}")
 
         log_lines = state["action_log"][-3:] or ["Belum ada aksi..."]
         lines.append("  Log Terbaru:")
@@ -465,6 +207,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         "pray_status": "Belum dicek",
         "daily_done": False,
         "daily_status": "Belum dicek",
+        "cash_status": "Belum dicek",
         "pause_status": "🟢 Aktif",
         "pause_seconds": 0,
         "embed_color": 0x57F287,
@@ -538,99 +281,14 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         if len(state["action_log"]) > 6:
             state["action_log"].pop(0)
 
-    def build_embed():
-        elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
-        log_text = "".join(f"{l}\n" for l in state["action_log"]) or "Belum ada aksi..."
-        gem_text = ""
-        for g, v in state["gem_counter_state"].items():
-            gem_text += f"{g[:14].ljust(14)}: {v}\n"
-        gem_text = gem_text or "Belum terdeteksi"
-
-        next_check = 20 - (state["grand_total"] % 20)
-        if state["grand_total"] % 20 == 0 and state["grand_total"] > 0:
-            next_check = 20
-
-        return {
-            "title": f"🤖 OWO BOT — {profile_name}",
-            "color": state["embed_color"],
-            "description": f"**🆔 Akun:** `{label}`\n**👤 Profil:** {profile_name}",
-            "fields": [
-                {"name": "📊 Statistik", "value": (
-                    f"```\nTotal H+B  : {state['grand_total']}\n"
-                    f"Hunt       : {state['hunt_count']}\n"
-                    f"Battle     : {state['battle_count']}\n"
-                    f"Runtime    : {elapsed}\n"
-                    f"Next Check : {next_check} H+B lagi\n```"
-                ), "inline": False},
-                {"name": "⏱️ Status", "value": (
-                    f"```\nStatus : {state['pause_status']}\n```"
-                ), "inline": False},
-                {"name": "💎 Gem Status", "value": f"```\n{gem_text}```", "inline": False},
-                {"name": "🗳️ Vote", "value": f"```\n{state['vote_status']}\n```", "inline": False},
-                {"name": "🙏 Pray", "value": f"```\n{state['pray_status']}\n```", "inline": False},
-                {"name": "📅 Daily", "value": f"```\n{state['daily_status']}\n```", "inline": False},
-                {"name": "📋 Log Terbaru", "value": f"```\n{log_text}```", "inline": False},
-            ],
-            "footer": {"text": f"🕒 {datetime.now().strftime('%H:%M:%S')} • {label}"}
-        }
-
     def send_webhook():
-        try:
-            embed = build_embed()
-            if state["webhook_msg_url"] is None:
-                resp = safe_request("POST", WEBHOOK_URL + "?wait=true", json={"embeds": [embed]})
-                if resp and resp.status_code in (200, 201):
-                    data = resp.json()
-                    msg_id = data.get("id")
-                    parts = WEBHOOK_URL.rstrip("/").split("/")
-                    wh_id, wh_token = parts[-2], parts[-1]
-                    state["webhook_msg_url"] = f"https://discord.com/api/v10/webhooks/{wh_id}/{wh_token}/messages/{msg_id}"
-            else:
-                safe_request("PATCH", state["webhook_msg_url"], json={"embeds": [embed]})
-        except Exception:
-            pass
+        webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request)
 
     def send_alert(msg_content, is_test=False):
-        try:
-            if is_test:
-                title = "🧪 TES ALERT (.testalert)"
-                desc_intro = f"**{label} - {profile_name}** — ini PERCOBAAN, bot TIDAK dihentikan.\n\n"
-                content_text = f"<@{PING_USER_ID}> @everyone 🧪 **{label} - {profile_name} TES ALERT — abaikan jika ini disengaja**"
-                next_steps = (
-                    f"**ℹ️ Catatan:**\n"
-                    f"Ini hanya tes notifikasi dari command `.testalert`.\n"
-                    f"Kalau ping <@USER_ID> dan @everyone masuk, sistem alert berjalan normal."
-                )
-            else:
-                title = "🚨 CAPTCHA / BAN DETECTED!"
-                desc_intro = f"**{label} - {profile_name}** dihentikan otomatis!\n\n"
-                content_text = f"<@{PING_USER_ID}> @everyone 🚨 **{label} - {profile_name} KENA CAPTCHA! BOT DIHENTIKAN!**"
-                next_steps = (
-                    f"**✅ Langkah selanjutnya:**\n"
-                    f"1. Selesaikan captcha di Discord\n"
-                    f"2. Ketik `.startbot` di channel ini, ATAU\n"
-                    f"3. Tekan tombol ▶️ Resume di panel web (`owoweb`)"
-                )
-
-            embed = {
-                "title": title,
-                "description": (
-                    desc_intro +
-                    f"**📩 Pesan OWO:**\n```{msg_content[:200]}```\n"
-                    f"**📊 Total H/B:** `{state['grand_total']}`\n"
-                    f"**⏱️ Waktu:** `{datetime.now().strftime('%H:%M:%S')}`\n\n"
-                    f"{next_steps}"
-                ),
-                "color": 0xFF0000,
-                "footer": {"text": f"{label} - Segera cek akun!"}
-            }
-            safe_request("POST", WEBHOOK_URL, json={
-                "content": content_text,
-                "embeds": [embed],
-                "allowed_mentions": {"parse": ["everyone", "users"]}
-            })
-        except Exception:
-            pass
+        webhook_utils.send_alert(
+            state, msg_content, WEBHOOK_URL, PING_USER_ID, label, profile_name,
+            safe_request, is_test
+        )
 
     def get_last_msg_id():
         try:
@@ -879,6 +537,28 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         send_webhook()
         time.sleep(2)
 
+    def auto_check_cash():
+        before_id = get_last_msg_id()
+        time.sleep(random.uniform(1, 2))
+        safe_request("POST", URL, json={"content": f"{PREFIX} cash"}, headers=headers)
+        time.sleep(3)
+        resp = get_owo_response(before_id, timeout=6)
+        ts = datetime.now().strftime("%H:%M:%S")
+        if resp:
+            numbers = re.findall(r"\*\*([\d,]+)\*\*", resp)
+            if not numbers:
+                numbers = re.findall(r"\b\d{1,3}(?:,\d{3})+\b|\b\d+\b", resp)
+            if numbers:
+                state["cash_status"] = f"{numbers[0]} cowoncy ({ts})"
+                log(f"💰 Cash: {numbers[0]}")
+            else:
+                state["cash_status"] = f"Format tidak dikenali ({ts})"
+                log("💰 Cash: format tidak dikenali")
+        else:
+            state["cash_status"] = f"OWO tidak balas ({ts})"
+            log("💰 Cash: OWO tidak balas")
+        time.sleep(2)
+
     def system_pause(seconds, label_text="Waiting", send_story=False, show_status=True):
         remaining = int(seconds)
         total_secs = remaining
@@ -909,6 +589,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
     print(f"{label} ({profile_name}) Mulai berjalan...")
     get_inventory_and_equip()
     auto_daily()
+    auto_check_cash()
 
     try:
         while not shutdown_event.is_set():
@@ -993,6 +674,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             send_webhook()
 
             if state.get("total_actions", 0) >= LONG_BREAK_TRIGGER:
+                auto_check_cash()
                 break_minutes = round(random.uniform(LONG_BREAK_MIN, LONG_BREAK_MAX), 1)
                 break_secs = int(break_minutes * 60)
                 log(f"☕ Long Break ({break_minutes} menit)...")

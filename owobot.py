@@ -545,12 +545,11 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         resp = get_owo_response(before_id, timeout=6)
         ts = datetime.now().strftime("%H:%M:%S")
         if resp:
-            numbers = re.findall(r"\*\*([\d,]+)\*\*", resp)
-            if not numbers:
-                numbers = re.findall(r"\b\d{1,3}(?:,\d{3})+\b|\b\d+\b", resp)
-            if numbers:
-                state["cash_status"] = f"{numbers[0]} cowoncy ({ts})"
-                log(f"💰 Cash: {numbers[0]}")
+            m = re.search(r"have\s*[*_\s]*([\d,]+)[*_\s]*cowoncy", resp, re.IGNORECASE)
+            if m:
+                amount = m.group(1)
+                state["cash_status"] = f"{amount} cowoncy ({ts})"
+                log(f"💰 Cash: {amount}")
             else:
                 state["cash_status"] = f"Format tidak dikenali ({ts})"
                 log("💰 Cash: format tidak dikenali")

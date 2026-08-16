@@ -53,7 +53,8 @@ SETTINGS_FILE = os.path.join(SCRIPT_DIR, "settings.txt")
 
 def load_settings():
     defaults = {
-        "PREFIX": "owo",
+        "PREFIX": "uwu",
+        "BOT_NAME": "owo",
         "JEDA_MIN": "12",
         "JEDA_MAX": "16",
         "LONG_BREAK_TRIGGER": "200",
@@ -77,6 +78,7 @@ def load_settings():
 
 SETTINGS = load_settings()
 PREFIX = SETTINGS["PREFIX"]
+BOT_NAME = SETTINGS["BOT_NAME"].lower()
 JEDA_MIN = float(SETTINGS["JEDA_MIN"])
 JEDA_MAX = float(SETTINGS["JEDA_MAX"])
 LONG_BREAK_TRIGGER = int(SETTINGS["LONG_BREAK_TRIGGER"])
@@ -309,7 +311,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                         if msg.get("id", "0") <= before_id:
                             continue
                         author = msg.get("author", {})
-                        if author.get("bot") and "owo" in author.get("username", "").lower():
+                        if author.get("bot") and BOT_NAME in author.get("username", "").lower():
                             text = msg.get("content", "")
                             for emb in msg.get("embeds", []):
                                 text += " " + emb.get("description", "")
@@ -399,7 +401,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                         if msg.get("id", "0") <= before_id:
                             continue
                         author = msg.get("author", {})
-                        if not (author.get("bot") and "owo" in author.get("username", "").lower()):
+                        if not (author.get("bot") and BOT_NAME in author.get("username", "").lower()):
                             continue
                         text = msg.get("content", "")
                         if "inventory" in text.lower() or "=" in text:
@@ -878,6 +880,7 @@ print("=" * 55)
 print("  • Jeda H+B   : 12-16 detik (random)")
 print("  • Cek Gem    : Setiap 20 H+B")
 print(f"  • Prefix     : {PREFIX}")
+print(f"  • Bot Name   : {BOT_NAME} (dipakai untuk deteksi balasan)")
 print(f"  • Jeda H+B   : {JEDA_MIN}-{JEDA_MAX} detik acak")
 print(f"  • Long Break : {LONG_BREAK_MIN}-{LONG_BREAK_MAX} menit acak (tiap {LONG_BREAK_TRIGGER} H+B), tidak kirim cerita saat break")
 print("  • .stopbot / .startbot di Discord (per akun)")

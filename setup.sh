@@ -216,6 +216,21 @@ read -e -i "${OLD_SET[JEDA_MAX]:-16}" -p "   Jeda H+B maksimal (detik): " SET_JE
 read -e -i "${OLD_SET[LONG_BREAK_TRIGGER]:-200}" -p "   Long break setiap berapa H+B: " SET_LB_TRIGGER
 read -e -i "${OLD_SET[LONG_BREAK_MIN]:-10}" -p "   Long break minimal (menit): " SET_LB_MIN
 read -e -i "${OLD_SET[LONG_BREAK_MAX]:-17}" -p "   Long break maksimal (menit): " SET_LB_MAX
+read -e -i "${OLD_SET[GEM_CHECK_INTERVAL]:-20}" -p "   Cek/pasang gem setiap berapa H+B: " SET_GEM_INTERVAL
+
+echo ""
+echo "   Pengaturan interval Pray:"
+OLD_PRAY_SEC="${OLD_SET[PRAY_INTERVAL_SECONDS]:-300}"
+read -p "   Satuan waktu pray — ketik 'm' untuk menit, 'd' untuk detik (Enter=pakai lama, ${OLD_PRAY_SEC} detik): " PRAY_UNIT
+if [ -z "$PRAY_UNIT" ]; then
+    SET_PRAY_SEC="$OLD_PRAY_SEC"
+elif [ "$PRAY_UNIT" == "m" ] || [ "$PRAY_UNIT" == "M" ]; then
+    read -p "   Interval pray (menit): " PRAY_VAL
+    SET_PRAY_SEC=$(( ${PRAY_VAL:-5} * 60 ))
+else
+    read -p "   Interval pray (detik): " PRAY_VAL
+    SET_PRAY_SEC=${PRAY_VAL:-300}
+fi
 
 cat > "$SETTINGS_FILE" << SETEOF
 PREFIX=${SET_PREFIX:-uwu}
@@ -225,6 +240,8 @@ JEDA_MAX=${SET_JEDA_MAX:-16}
 LONG_BREAK_TRIGGER=${SET_LB_TRIGGER:-200}
 LONG_BREAK_MIN=${SET_LB_MIN:-10}
 LONG_BREAK_MAX=${SET_LB_MAX:-17}
+GEM_CHECK_INTERVAL=${SET_GEM_INTERVAL:-20}
+PRAY_INTERVAL_SECONDS=${SET_PRAY_SEC:-300}
 SETEOF
 echo "   ✅ Pengaturan tersimpan!"
 echo ""

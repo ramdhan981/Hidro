@@ -9,7 +9,7 @@ supaya bisa dipanggil dari akun manapun tanpa saling tabrakan.
 from datetime import datetime
 
 
-def build_embed(state, label, profile_name):
+def build_embed(state, label, profile_name, gem_check_interval=20):
     elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
     log_text = "".join(f"{l}\n" for l in state["action_log"]) or "Belum ada aksi..."
     gem_text = ""
@@ -17,9 +17,9 @@ def build_embed(state, label, profile_name):
         gem_text += f"{g[:14].ljust(14)}: {v}\n"
     gem_text = gem_text or "Belum terdeteksi"
 
-    next_check = 20 - (state["grand_total"] % 20)
-    if state["grand_total"] % 20 == 0 and state["grand_total"] > 0:
-        next_check = 20
+    next_check = gem_check_interval - (state["grand_total"] % gem_check_interval)
+    if state["grand_total"] % gem_check_interval == 0 and state["grand_total"] > 0:
+        next_check = gem_check_interval
 
     return {
         "title": f"🤖 OWO BOT — {profile_name}",
@@ -46,9 +46,9 @@ def build_embed(state, label, profile_name):
     }
 
 
-def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request):
+def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_check_interval=20):
     try:
-        embed = build_embed(state, label, profile_name)
+        embed = build_embed(state, label, profile_name, gem_check_interval)
         if state["webhook_msg_url"] is None:
             resp = safe_request("POST", WEBHOOK_URL + "?wait=true", json={"embeds": [embed]})
             if resp and resp.status_code in (200, 201):

@@ -60,6 +60,8 @@ def load_settings():
         "LONG_BREAK_TRIGGER": "200",
         "LONG_BREAK_MIN": "10",
         "LONG_BREAK_MAX": "17",
+        "GEM_CHECK_INTERVAL": "20",
+        "PRAY_INTERVAL_SECONDS": "300",
     }
     try:
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -84,6 +86,8 @@ JEDA_MAX = float(SETTINGS["JEDA_MAX"])
 LONG_BREAK_TRIGGER = int(SETTINGS["LONG_BREAK_TRIGGER"])
 LONG_BREAK_MIN = float(SETTINGS["LONG_BREAK_MIN"])
 LONG_BREAK_MAX = float(SETTINGS["LONG_BREAK_MAX"])
+GEM_CHECK_INTERVAL = int(SETTINGS["GEM_CHECK_INTERVAL"])
+PRAY_INTERVAL_SECONDS = int(SETTINGS["PRAY_INTERVAL_SECONDS"])
 
 # ============================================================
 # Web panel (owoweb) & webhook Discord — dipindah ke file terpisah
@@ -284,7 +288,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             state["action_log"].pop(0)
 
     def send_webhook():
-        webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request)
+        webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, GEM_CHECK_INTERVAL)
 
     def send_alert(msg_content, is_test=False):
         webhook_utils.send_alert(
@@ -479,7 +483,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
     def auto_pray():
         if state["last_pray_time"] is not None:
-            if (datetime.now() - state["last_pray_time"]).total_seconds() < 302:
+            if (datetime.now() - state["last_pray_time"]).total_seconds() < PRAY_INTERVAL_SECONDS:
                 return
         before_id = get_last_msg_id()
         time.sleep(random.uniform(0.5, 1))
@@ -686,8 +690,8 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 pause_secs = round(random.uniform(JEDA_MIN, JEDA_MAX), 1)
                 system_pause(pause_secs, "Jeda H+B", show_status=False)
 
-            if state["grand_total"] % 20 == 0 and state["grand_total"] > 0:
-                log("🎒 Cek inventory rutin (setiap 20 H+B)...")
+            if state["grand_total"] % GEM_CHECK_INTERVAL == 0 and state["grand_total"] > 0:
+                log(f"🎒 Cek inventory rutin (setiap {GEM_CHECK_INTERVAL} H+B)...")
                 send_webhook()
                 state["gems_need"] = list(GEM_CODES.keys())
                 get_inventory_and_equip(force=True)
@@ -878,7 +882,8 @@ print("=" * 55)
 print(f"  OWO BOT — {len(accounts)} Akun Terdeteksi")
 print("=" * 55)
 print("  • Jeda H+B   : 12-16 detik (random)")
-print("  • Cek Gem    : Setiap 20 H+B")
+print(f"  • Cek Gem    : Setiap {GEM_CHECK_INTERVAL} H+B")
+print(f"  • Pray       : Setiap {PRAY_INTERVAL_SECONDS} detik ({round(PRAY_INTERVAL_SECONDS/60, 1)} menit)")
 print(f"  • Prefix     : {PREFIX}")
 print(f"  • Bot Name   : {BOT_NAME} (dipakai untuk deteksi balasan)")
 print(f"  • Jeda H+B   : {JEDA_MIN}-{JEDA_MAX} detik acak")

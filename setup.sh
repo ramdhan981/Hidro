@@ -209,7 +209,7 @@ if [ -f "$SETTINGS_FILE" ]; then
 fi
 
 echo "⚙️  Pengaturan Bot"
-read -e -i "${OLD_SET[PREFIX]:-uwu}" -p "   Prefix command (misal 'uwu'): " SET_PREFIX
+read -e -i "${OLD_SET[PREFIX]:-owo}" -p "   Prefix command (misal 'owo'): " SET_PREFIX
 read -e -i "${OLD_SET[BOT_NAME]:-owo}" -p "   Nama bot game di Discord (buat deteksi balasan, misal 'owo'): " SET_BOT_NAME
 read -e -i "${OLD_SET[JEDA_MIN]:-12}" -p "   Jeda H+B minimal (detik): " SET_JEDA_MIN
 read -e -i "${OLD_SET[JEDA_MAX]:-16}" -p "   Jeda H+B maksimal (detik): " SET_JEDA_MAX
@@ -233,7 +233,7 @@ else
 fi
 
 cat > "$SETTINGS_FILE" << SETEOF
-PREFIX=${SET_PREFIX:-uwu}
+PREFIX=${SET_PREFIX:-owo}
 BOT_NAME=${SET_BOT_NAME:-owo}
 JEDA_MIN=${SET_JEDA_MIN:-12}
 JEDA_MAX=${SET_JEDA_MAX:-16}

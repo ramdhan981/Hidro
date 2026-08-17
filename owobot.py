@@ -53,7 +53,7 @@ SETTINGS_FILE = os.path.join(SCRIPT_DIR, "settings.txt")
 
 def load_settings():
     defaults = {
-        "PREFIX": "uwu",
+        "PREFIX": "owo",
         "BOT_NAME": "owo",
         "JEDA_MIN": "12",
         "JEDA_MAX": "16",
@@ -427,7 +427,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 pass
 
         if not inv_text:
-            log("⚠️ Inv: OWO tidak balas")
+            log(f"⚠️ Inv: {BOT_NAME.upper()} tidak balas")
             send_webhook()
             return
 
@@ -570,8 +570,8 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 state["cash_status"] = f"Format tidak dikenali ({ts})"
                 log("💰 Cash: format tidak dikenali")
         else:
-            state["cash_status"] = f"OWO tidak balas ({ts})"
-            log("💰 Cash: OWO tidak balas")
+            state["cash_status"] = f"{BOT_NAME.upper()} tidak balas ({ts})"
+            log(f"💰 Cash: {BOT_NAME.upper()} tidak balas")
         time.sleep(2)
 
     def system_pause(seconds, label_text="Waiting", send_story=False, show_status=True):

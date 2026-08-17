@@ -223,6 +223,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
     label = f"[AKUN-{acc_id}]"
 
     profile_name = f"Akun #{acc_id}"
+    avatar_url = None
     token_valid = False
     token_error_reason = ""
     try:
@@ -230,6 +231,14 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         if resp.status_code == 200:
             user_data = resp.json()
             profile_name = f"{user_data.get('username', 'Unknown')}#{user_data.get('discriminator', '0000')} (Akun {acc_id})"
+            user_id = user_data.get("id")
+            avatar_hash = user_data.get("avatar")
+            if user_id and avatar_hash:
+                ext = "gif" if avatar_hash.startswith("a_") else "png"
+                avatar_url = f"https://cdn.discordapp.com/avatars/{user_id}/{avatar_hash}.{ext}?size=64"
+            elif user_id:
+                default_idx = int(user_data.get("discriminator", "0")) % 5 if user_data.get("discriminator", "0").isdigit() else 0
+                avatar_url = f"https://cdn.discordapp.com/embed/avatars/{default_idx}.png"
             token_valid = True
         elif resp.status_code == 401:
             token_error_reason = "Token tidak valid / salah (401 Unauthorized)"
@@ -260,6 +269,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             "state": state,
             "profile_name": profile_name,
             "label": label,
+            "avatar_url": avatar_url,
         }
 
     def safe_request(method, url, max_wait=600, **kwargs):

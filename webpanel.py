@@ -29,6 +29,7 @@ def build_status_payload():
             "id": acc_id,
             "label": info["label"],
             "profile_name": info["profile_name"],
+            "avatar_url": info.get("avatar_url"),
             "status": state["pause_status"],
             "grand_total": state["grand_total"],
             "hunt_count": state["hunt_count"],
@@ -133,6 +134,8 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
                     accounts.innerHTML = data.accounts.map(acc => `
                       <div class=\"card\">
                         <div style=\"display: flex; justify-content: space-between; align-items: start; gap: 12px;\">
+                          <div style=\"display:flex; align-items:center; gap:10px; flex:1;\">
+                            ${acc.avatar_url ? `<img src=\"${acc.avatar_url}\" alt=\"avatar\" style=\"width:44px;height:44px;border-radius:50%;flex-shrink:0;border:2px solid #334155;\">` : `<div style=\"width:44px;height:44px;border-radius:50%;background:#334155;flex-shrink:0;\"></div>`}
                           <div style=\"flex: 1;\">
                             <h4 style=\"margin-top:0;margin-bottom:8px\">${escapeHtml(acc.label)} — ${escapeHtml(acc.profile_name)}</h4>
                             <div class=\"grid\">
@@ -148,6 +151,7 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
                             <div class=\"small\">Daily: ${escapeHtml(acc.daily)}</div>
                             <div class=\"small\">Cash: ${escapeHtml(acc.cash)}</div>
                             <pre>${escapeHtml(acc.logs.join('\\n'))}</pre>
+                          </div>
                           </div>
                           <div style=\"min-width: 120px;\">
                             <div class=\"btn-group\" style=\"flex-direction: column;\">

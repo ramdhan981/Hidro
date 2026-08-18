@@ -370,6 +370,12 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     if "banned for" in msg_lower or "macros or botting" in msg_lower:
                         return True, msg_content
 
+                    if "type the code from the image in this channel" in msg_lower:
+                        return True, msg_content
+
+                    if "ketik code dari gambar di channel ini" in msg_lower:
+                        return True, msg_content
+
                     for kw in HUMAN_KEYWORDS:
                         if kw in msg_lower:
                             return True, msg_content

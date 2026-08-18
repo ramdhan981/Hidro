@@ -344,7 +344,19 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             r = safe_request("GET", f"{URL}?limit=10", headers=headers, timeout=10)
             if r and r.status_code == 200:
                 for msg in r.json():
-                    msg_content = msg.get("content", "")
+                    raw_content = msg.get("content", "")
+                    embed_text = ""
+                    for emb in msg.get("embeds", []):
+                        embed_text += " " + emb.get("title", "")
+                        embed_text += " " + emb.get("description", "")
+                        footer = emb.get("footer", {}) or {}
+                        embed_text += " " + footer.get("text", "")
+                        author_blk = emb.get("author", {}) or {}
+                        embed_text += " " + author_blk.get("name", "")
+                        for field in emb.get("fields", []):
+                            embed_text += " " + field.get("name", "") + " " + field.get("value", "")
+
+                    msg_content = (raw_content + " " + embed_text).strip()
                     if not msg_content:
                         continue
                     msg_clean = _ud.normalize("NFKC", msg_content)

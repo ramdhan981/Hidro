@@ -8,7 +8,7 @@ import threading
 from datetime import datetime
 
 HUMAN_KEYWORDS = [
-    "are you human", "captcha", "verify", "human verification",
+    "are you human", "human verification",
     "bot detected", "please verify", "i think you're a bot",
     "prove you're human", "human check",
     "are you a real human",

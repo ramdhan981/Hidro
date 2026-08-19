@@ -33,6 +33,25 @@ GEM_CODES = {
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 STORIES_FILE = os.path.join(SCRIPT_DIR, "stories.txt")
 
+def extract_components_text(components):
+    """Ambil semua teks dari struktur Discord 'Components V2' (rekursif),
+    karena beberapa bot (misal UwU) kirim pesan captcha lewat format ini,
+    bukan lewat 'content' atau 'embeds' biasa."""
+    text = ""
+    if not components:
+        return text
+    for comp in components:
+        if not isinstance(comp, dict):
+            continue
+        if "content" in comp:
+            text += " " + str(comp.get("content", ""))
+        if comp.get("components"):
+            text += " " + extract_components_text(comp["components"])
+        if comp.get("accessory") and isinstance(comp["accessory"], dict) and "content" in comp["accessory"]:
+            text += " " + str(comp["accessory"].get("content", ""))
+    return text
+
+
 def load_stories():
     default_stories = [
         "It always seems impossible until it's done.",
@@ -356,7 +375,9 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                         for field in emb.get("fields", []):
                             embed_text += " " + field.get("name", "") + " " + field.get("value", "")
 
-                    msg_content = (raw_content + " " + embed_text).strip()
+                    component_text = extract_components_text(msg.get("components", []))
+
+                    msg_content = (raw_content + " " + embed_text + " " + component_text).strip()
                     if not msg_content:
                         continue
                     msg_clean = _ud.normalize("NFKC", msg_content)

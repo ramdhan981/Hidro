@@ -50,7 +50,7 @@ def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_chec
     try:
         embed = build_embed(state, label, profile_name, gem_check_interval)
         if state["webhook_msg_url"] is None:
-            resp = safe_request("POST", WEBHOOK_URL + "?wait=true", json={"embeds": [embed]})
+            resp = safe_request("POST", WEBHOOK_URL + "?wait=true", json={"embeds": [embed]}, max_wait=20)
             if resp and resp.status_code in (200, 201):
                 data = resp.json()
                 msg_id = data.get("id")
@@ -58,7 +58,7 @@ def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_chec
                 wh_id, wh_token = parts[-2], parts[-1]
                 state["webhook_msg_url"] = f"https://discord.com/api/v10/webhooks/{wh_id}/{wh_token}/messages/{msg_id}"
         else:
-            safe_request("PATCH", state["webhook_msg_url"], json={"embeds": [embed]})
+            safe_request("PATCH", state["webhook_msg_url"], json={"embeds": [embed]}, max_wait=20)
     except Exception:
         pass
 
@@ -101,6 +101,6 @@ def send_alert(state, msg_content, WEBHOOK_URL, PING_USER_ID, label, profile_nam
             "content": content_text,
             "embeds": [embed],
             "allowed_mentions": {"parse": ["everyone", "users"]}
-        })
+        }, max_wait=60)
     except Exception:
         pass

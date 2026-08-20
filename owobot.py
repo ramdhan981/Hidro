@@ -416,9 +416,31 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             pass
         return False, ""
 
+    def handle_captcha_check():
+        """True kalau captcha terdeteksi & sudah ditangani (loop utama harus 'continue')."""
+        detected, tmsg = check_human()
+        if not detected:
+            return False
+        send_alert(tmsg)
+        state["is_paused"] = True
+        state["pause_status"] = "🚨 CAPTCHA - Verifikasi manual dulu!"
+        state["embed_color"] = 0xFF0000
+        send_webhook()
+        while state["is_paused"] and not shutdown_event.is_set():
+            time.sleep(5)
+            send_webhook()
+            if check_discord_cmd() == "start":
+                state["is_paused"] = False
+                state["pause_status"] = "🟢 Aktif"
+                state["embed_color"] = 0x57F287
+                safe_request("POST", URL, json={"content": "▶️ Bot dilanjutkan setelah verifikasi captcha!"}, headers=headers)
+                send_webhook()
+                break
+        return True
+
     def check_discord_cmd():
         try:
-            r = safe_request("GET", f"{URL}?limit=5", headers=headers, timeout=10)
+            r = safe_request("GET", f"{URL}?limit=5", headers=headers, timeout=10, max_wait=20)
             if r and r.status_code == 200:
                 for msg in r.json():
                     text = msg.get("content", "").strip().lower()
@@ -647,23 +669,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
     try:
         while not shutdown_event.is_set():
-            detected, tmsg = check_human()
-            if detected:
-                send_alert(tmsg)
-                state["is_paused"] = True
-                state["pause_status"] = "🚨 CAPTCHA - Verifikasi manual dulu!"
-                state["embed_color"] = 0xFF0000
-                send_webhook()
-                while state["is_paused"] and not shutdown_event.is_set():
-                    time.sleep(5)
-                    send_webhook()
-                    if check_discord_cmd() == "start":
-                        state["is_paused"] = False
-                        state["pause_status"] = "🟢 Aktif"
-                        state["embed_color"] = 0x57F287
-                        safe_request("POST", URL, json={"content": "▶️ Bot dilanjutkan setelah verifikasi captcha!"}, headers=headers)
-                        send_webhook()
-                        break
+            if handle_captcha_check():
                 if shutdown_event.is_set():
                     break
                 continue
@@ -719,6 +725,11 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             hunt_resp = get_owo_response(before_id, timeout=4)
             if hunt_resp:
                 check_gem_expiry(hunt_resp)
+
+            if handle_captcha_check():
+                if shutdown_event.is_set():
+                    break
+                continue
 
             try:
                 safe_request("POST", URL, json={"content": random.choice(stories)}, headers=headers)

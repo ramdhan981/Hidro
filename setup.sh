@@ -28,6 +28,7 @@ pkg update -y -q 2>/dev/null
 pkg install python -y -q 2>/dev/null
 pkg install termux-tools -y -q 2>/dev/null
 pkg install curl -y -q 2>/dev/null
+pkg install dialog -y -q 2>/dev/null
 pip install requests -q 2>/dev/null
 mkdir -p ~/owobot
 mkdir -p ~/.termux/boot
@@ -198,7 +199,7 @@ else
     echo ""
 fi
 
-# Pengaturan bot (prefix, jeda H+B, long break)
+# Pengaturan bot (prefix, jeda H+B, long break, gem, pray)
 SETTINGS_FILE=~/owobot/settings.txt
 declare -A OLD_SET
 if [ -f "$SETTINGS_FILE" ]; then
@@ -208,31 +209,73 @@ if [ -f "$SETTINGS_FILE" ]; then
     done < "$SETTINGS_FILE"
 fi
 
-echo "⚙️  Pengaturan Bot"
-read -e -i "${OLD_SET[PREFIX]:-owo}" -p "   Prefix command (misal 'owo'): " SET_PREFIX
-read -e -i "${OLD_SET[BOT_NAME]:-owo}" -p "   Nama bot game di Discord (buat deteksi balasan, misal 'owo'): " SET_BOT_NAME
-read -e -i "${OLD_SET[JEDA_MIN]:-12}" -p "   Jeda H+B minimal (detik): " SET_JEDA_MIN
-read -e -i "${OLD_SET[JEDA_MAX]:-16}" -p "   Jeda H+B maksimal (detik): " SET_JEDA_MAX
-read -e -i "${OLD_SET[LONG_BREAK_TRIGGER]:-200}" -p "   Long break setiap berapa H+B: " SET_LB_TRIGGER
-read -e -i "${OLD_SET[LONG_BREAK_MIN]:-10}" -p "   Long break minimal (menit): " SET_LB_MIN
-read -e -i "${OLD_SET[LONG_BREAK_MAX]:-17}" -p "   Long break maksimal (menit): " SET_LB_MAX
-read -e -i "${OLD_SET[GEM_CHECK_INTERVAL]:-20}" -p "   Cek/pasang gem setiap berapa H+B: " SET_GEM_INTERVAL
+# Nilai default (dari settings.txt lama, atau default bawaan kalau belum ada)
+D_PREFIX="${OLD_SET[PREFIX]:-owo}"
+D_BOT_NAME="${OLD_SET[BOT_NAME]:-owo}"
+D_JEDA_MIN="${OLD_SET[JEDA_MIN]:-12}"
+D_JEDA_MAX="${OLD_SET[JEDA_MAX]:-16}"
+D_LB_TRIGGER="${OLD_SET[LONG_BREAK_TRIGGER]:-200}"
+D_LB_MIN="${OLD_SET[LONG_BREAK_MIN]:-10}"
+D_LB_MAX="${OLD_SET[LONG_BREAK_MAX]:-17}"
+D_GEM_INT="${OLD_SET[GEM_CHECK_INTERVAL]:-20}"
+D_PRAY_SEC="${OLD_SET[PRAY_INTERVAL_SECONDS]:-300}"
 
+echo "⚙️  Pengaturan Bot saat ini:"
+echo "   Prefix=$D_PREFIX | Bot Name=$D_BOT_NAME | Jeda=$D_JEDA_MIN-$D_JEDA_MAX detik"
+echo "   Long Break tiap $D_LB_TRIGGER H+B ($D_LB_MIN-$D_LB_MAX menit) | Cek Gem tiap $D_GEM_INT H+B | Pray tiap $D_PRAY_SEC detik"
 echo ""
-echo "   Pengaturan interval Pray:"
-OLD_PRAY_SEC="${OLD_SET[PRAY_INTERVAL_SECONDS]:-300}"
-read -p "   Satuan waktu pray — ketik 'm' untuk menit, 'd' untuk detik (Enter=pakai lama, ${OLD_PRAY_SEC} detik): " PRAY_UNIT
-if [ -z "$PRAY_UNIT" ]; then
-    SET_PRAY_SEC="$OLD_PRAY_SEC"
-elif [ "$PRAY_UNIT" == "m" ] || [ "$PRAY_UNIT" == "M" ]; then
-    read -p "   Interval pray (menit): " PRAY_VAL
-    SET_PRAY_SEC=$(( ${PRAY_VAL:-5} * 60 ))
-else
-    read -p "   Interval pray (detik): " PRAY_VAL
-    SET_PRAY_SEC=${PRAY_VAL:-300}
-fi
+read -p "   Mau ubah pengaturan? (y/n, Enter=pakai yang tersimpan): " GANTI_SET
 
-cat > "$SETTINGS_FILE" << SETEOF
+if [ "$GANTI_SET" == "y" ] || [ "$GANTI_SET" == "Y" ]; then
+    if command -v dialog >/dev/null 2>&1; then
+        exec 3>&1
+        FORM_OUTPUT=$(dialog --backtitle "OWO Bot - Pengaturan" \
+            --form "Edit semua pengaturan (TAB/Panah pindah kolom, Enter selesai):" 20 70 9 \
+            "Prefix command:"                  1 1 "$D_PREFIX"    1 26 20 0 \
+            "Nama bot game (Discord):"         2 1 "$D_BOT_NAME"  2 26 20 0 \
+            "Jeda H+B min (detik):"            3 1 "$D_JEDA_MIN"  3 26 10 0 \
+            "Jeda H+B max (detik):"            4 1 "$D_JEDA_MAX"  4 26 10 0 \
+            "Long break tiap (H+B):"           5 1 "$D_LB_TRIGGER" 5 26 10 0 \
+            "Long break min (menit):"          6 1 "$D_LB_MIN"    6 26 10 0 \
+            "Long break max (menit):"          7 1 "$D_LB_MAX"    7 26 10 0 \
+            "Cek gem tiap (H+B):"              8 1 "$D_GEM_INT"   8 26 10 0 \
+            "Interval pray (detik, 300=5m):"   9 1 "$D_PRAY_SEC"  9 26 10 0 \
+            2>&1 1>&3)
+        FORM_STATUS=$?
+        exec 3>&-
+        clear
+        if [ $FORM_STATUS -eq 0 ] && [ -n "$FORM_OUTPUT" ]; then
+            mapfile -t FVALS <<< "$FORM_OUTPUT"
+            SET_PREFIX="${FVALS[0]:-$D_PREFIX}"
+            SET_BOT_NAME="${FVALS[1]:-$D_BOT_NAME}"
+            SET_JEDA_MIN="${FVALS[2]:-$D_JEDA_MIN}"
+            SET_JEDA_MAX="${FVALS[3]:-$D_JEDA_MAX}"
+            SET_LB_TRIGGER="${FVALS[4]:-$D_LB_TRIGGER}"
+            SET_LB_MIN="${FVALS[5]:-$D_LB_MIN}"
+            SET_LB_MAX="${FVALS[6]:-$D_LB_MAX}"
+            SET_GEM_INTERVAL="${FVALS[7]:-$D_GEM_INT}"
+            SET_PRAY_SEC="${FVALS[8]:-$D_PRAY_SEC}"
+        else
+            echo "   Dibatalkan, pengaturan lama tetap dipakai."
+            SET_PREFIX="$D_PREFIX"; SET_BOT_NAME="$D_BOT_NAME"
+            SET_JEDA_MIN="$D_JEDA_MIN"; SET_JEDA_MAX="$D_JEDA_MAX"
+            SET_LB_TRIGGER="$D_LB_TRIGGER"; SET_LB_MIN="$D_LB_MIN"; SET_LB_MAX="$D_LB_MAX"
+            SET_GEM_INTERVAL="$D_GEM_INT"; SET_PRAY_SEC="$D_PRAY_SEC"
+        fi
+    else
+        echo "   ⚠️  'dialog' tidak tersedia, pakai mode tanya satu-satu:"
+        read -e -i "$D_PREFIX" -p "   Prefix command: " SET_PREFIX
+        read -e -i "$D_BOT_NAME" -p "   Nama bot game: " SET_BOT_NAME
+        read -e -i "$D_JEDA_MIN" -p "   Jeda H+B minimal (detik): " SET_JEDA_MIN
+        read -e -i "$D_JEDA_MAX" -p "   Jeda H+B maksimal (detik): " SET_JEDA_MAX
+        read -e -i "$D_LB_TRIGGER" -p "   Long break setiap berapa H+B: " SET_LB_TRIGGER
+        read -e -i "$D_LB_MIN" -p "   Long break minimal (menit): " SET_LB_MIN
+        read -e -i "$D_LB_MAX" -p "   Long break maksimal (menit): " SET_LB_MAX
+        read -e -i "$D_GEM_INT" -p "   Cek/pasang gem setiap berapa H+B: " SET_GEM_INTERVAL
+        read -e -i "$D_PRAY_SEC" -p "   Interval pray (detik): " SET_PRAY_SEC
+    fi
+
+    cat > "$SETTINGS_FILE" << SETEOF
 PREFIX=${SET_PREFIX:-owo}
 BOT_NAME=${SET_BOT_NAME:-owo}
 JEDA_MIN=${SET_JEDA_MIN:-12}
@@ -243,7 +286,24 @@ LONG_BREAK_MAX=${SET_LB_MAX:-17}
 GEM_CHECK_INTERVAL=${SET_GEM_INTERVAL:-20}
 PRAY_INTERVAL_SECONDS=${SET_PRAY_SEC:-300}
 SETEOF
-echo "   ✅ Pengaturan tersimpan!"
+    echo "   ✅ Pengaturan tersimpan!"
+elif [ ! -f "$SETTINGS_FILE" ]; then
+    # Belum pernah ada settings.txt sama sekali -> tulis default
+    cat > "$SETTINGS_FILE" << SETEOF
+PREFIX=$D_PREFIX
+BOT_NAME=$D_BOT_NAME
+JEDA_MIN=$D_JEDA_MIN
+JEDA_MAX=$D_JEDA_MAX
+LONG_BREAK_TRIGGER=$D_LB_TRIGGER
+LONG_BREAK_MIN=$D_LB_MIN
+LONG_BREAK_MAX=$D_LB_MAX
+GEM_CHECK_INTERVAL=$D_GEM_INT
+PRAY_INTERVAL_SECONDS=$D_PRAY_SEC
+SETEOF
+    echo "   ✅ Pengaturan default dibuat (belum ada sebelumnya)."
+else
+    echo "   ➡️  Pengaturan lama dipakai (tidak diubah)."
+fi
 echo ""
 
 echo "[4/4] Ambil owobot.py, webpanel.py, webhook_utils.py & stories.txt dari GitHub (ramdhan981/Hidro)..."

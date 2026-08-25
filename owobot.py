@@ -715,8 +715,8 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
             state["hunt_count"] += 1
             state["battle_count"] += 1
-            state["grand_total"] += 2
-            state["total_actions"] = state.get("total_actions", 0) + 2
+            state["grand_total"] += 1
+            state["total_actions"] = state.get("total_actions", 0) + 1
             state["counter"] += 1
 
             log(f"✅ H+B #{state['grand_total']}")

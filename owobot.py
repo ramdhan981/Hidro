@@ -81,6 +81,7 @@ def load_settings():
         "LONG_BREAK_MAX": "17",
         "GEM_CHECK_INTERVAL": "20",
         "PRAY_INTERVAL_SECONDS": "300",
+        "VOTE_ENABLED": "y",
     }
     try:
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -107,6 +108,7 @@ LONG_BREAK_MIN = float(SETTINGS["LONG_BREAK_MIN"])
 LONG_BREAK_MAX = float(SETTINGS["LONG_BREAK_MAX"])
 GEM_CHECK_INTERVAL = int(SETTINGS["GEM_CHECK_INTERVAL"])
 PRAY_INTERVAL_SECONDS = int(SETTINGS["PRAY_INTERVAL_SECONDS"])
+VOTE_ENABLED = SETTINGS["VOTE_ENABLED"].strip().lower() == "y"
 
 # ============================================================
 # Web panel (owoweb) & webhook Discord — dipindah ke file terpisah
@@ -227,7 +229,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         "gems_use": "",
         "is_paused": False,
         "last_vote_time": None,
-        "vote_status": "Belum dicek",
+        "vote_status": "Belum dicek" if VOTE_ENABLED else "🚫 Dinonaktifkan",
         "last_pray_time": None,
         "pray_status": "Belum dicek",
         "daily_done": False,
@@ -317,7 +319,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             state["action_log"].pop(0)
 
     def send_webhook():
-        webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, GEM_CHECK_INTERVAL)
+        webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, GEM_CHECK_INTERVAL, VOTE_ENABLED)
 
     def send_alert(msg_content, is_test=False):
         webhook_utils.send_alert(
@@ -758,7 +760,8 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 system_pause(random.randint(5, 8), "Jeda Inventory", show_status=False)
 
             auto_pray()
-            auto_vote()
+            if VOTE_ENABLED:
+                auto_vote()
 
         if shutdown_event.is_set():
             state["pause_status"] = "⛔ Bot telah dihentikan"

@@ -219,10 +219,11 @@ D_LB_MIN="${OLD_SET[LONG_BREAK_MIN]:-10}"
 D_LB_MAX="${OLD_SET[LONG_BREAK_MAX]:-17}"
 D_GEM_INT="${OLD_SET[GEM_CHECK_INTERVAL]:-20}"
 D_PRAY_SEC="${OLD_SET[PRAY_INTERVAL_SECONDS]:-300}"
+D_VOTE="${OLD_SET[VOTE_ENABLED]:-y}"
 
 echo "⚙️  Pengaturan Bot saat ini:"
 echo "   Prefix=$D_PREFIX | Bot Name=$D_BOT_NAME | Jeda=$D_JEDA_MIN-$D_JEDA_MAX detik"
-echo "   Long Break tiap $D_LB_TRIGGER H+B ($D_LB_MIN-$D_LB_MAX menit) | Cek Gem tiap $D_GEM_INT H+B | Pray tiap $D_PRAY_SEC detik"
+echo "   Long Break tiap $D_LB_TRIGGER H+B ($D_LB_MIN-$D_LB_MAX menit) | Cek Gem tiap $D_GEM_INT H+B | Pray tiap $D_PRAY_SEC detik | Vote: $D_VOTE"
 echo ""
 read -p "   Mau ubah pengaturan? (y/n, Enter=pakai yang tersimpan): " GANTI_SET
 
@@ -230,7 +231,7 @@ if [ "$GANTI_SET" == "y" ] || [ "$GANTI_SET" == "Y" ]; then
     if command -v dialog >/dev/null 2>&1; then
         exec 3>&1
         FORM_OUTPUT=$(dialog --backtitle "OWO Bot - Pengaturan" \
-            --form "Edit semua pengaturan (TAB/Panah pindah kolom, Enter selesai):" 20 70 9 \
+            --form "Edit semua pengaturan (TAB/Panah pindah kolom, Enter selesai):" 21 70 10 \
             "Prefix command:"                  1 1 "$D_PREFIX"    1 26 20 0 \
             "Nama bot game (Discord):"         2 1 "$D_BOT_NAME"  2 26 20 0 \
             "Jeda H+B min (detik):"            3 1 "$D_JEDA_MIN"  3 26 10 0 \
@@ -240,6 +241,7 @@ if [ "$GANTI_SET" == "y" ] || [ "$GANTI_SET" == "Y" ]; then
             "Long break max (menit):"          7 1 "$D_LB_MAX"    7 26 10 0 \
             "Cek gem tiap (H+B):"              8 1 "$D_GEM_INT"   8 26 10 0 \
             "Interval pray (detik, 300=5m):"   9 1 "$D_PRAY_SEC"  9 26 10 0 \
+            "Vote aktif? (y/n):"               10 1 "$D_VOTE"     10 26 5 0 \
             2>&1 1>&3)
         FORM_STATUS=$?
         exec 3>&-
@@ -255,12 +257,13 @@ if [ "$GANTI_SET" == "y" ] || [ "$GANTI_SET" == "Y" ]; then
             SET_LB_MAX="${FVALS[6]:-$D_LB_MAX}"
             SET_GEM_INTERVAL="${FVALS[7]:-$D_GEM_INT}"
             SET_PRAY_SEC="${FVALS[8]:-$D_PRAY_SEC}"
+            SET_VOTE="${FVALS[9]:-$D_VOTE}"
         else
             echo "   Dibatalkan, pengaturan lama tetap dipakai."
             SET_PREFIX="$D_PREFIX"; SET_BOT_NAME="$D_BOT_NAME"
             SET_JEDA_MIN="$D_JEDA_MIN"; SET_JEDA_MAX="$D_JEDA_MAX"
             SET_LB_TRIGGER="$D_LB_TRIGGER"; SET_LB_MIN="$D_LB_MIN"; SET_LB_MAX="$D_LB_MAX"
-            SET_GEM_INTERVAL="$D_GEM_INT"; SET_PRAY_SEC="$D_PRAY_SEC"
+            SET_GEM_INTERVAL="$D_GEM_INT"; SET_PRAY_SEC="$D_PRAY_SEC"; SET_VOTE="$D_VOTE"
         fi
     else
         echo "   ⚠️  'dialog' tidak tersedia, pakai mode tanya satu-satu:"
@@ -272,6 +275,7 @@ if [ "$GANTI_SET" == "y" ] || [ "$GANTI_SET" == "Y" ]; then
         read -e -i "$D_LB_MIN" -p "   Long break minimal (menit): " SET_LB_MIN
         read -e -i "$D_LB_MAX" -p "   Long break maksimal (menit): " SET_LB_MAX
         read -e -i "$D_GEM_INT" -p "   Cek/pasang gem setiap berapa H+B: " SET_GEM_INTERVAL
+        read -e -i "$D_VOTE" -p "   Vote aktif? (y/n): " SET_VOTE
         read -e -i "$D_PRAY_SEC" -p "   Interval pray (detik): " SET_PRAY_SEC
     fi
 
@@ -285,6 +289,7 @@ LONG_BREAK_MIN=${SET_LB_MIN:-10}
 LONG_BREAK_MAX=${SET_LB_MAX:-17}
 GEM_CHECK_INTERVAL=${SET_GEM_INTERVAL:-20}
 PRAY_INTERVAL_SECONDS=${SET_PRAY_SEC:-300}
+VOTE_ENABLED=${SET_VOTE:-y}
 SETEOF
     echo "   ✅ Pengaturan tersimpan!"
 elif [ ! -f "$SETTINGS_FILE" ]; then
@@ -299,6 +304,7 @@ LONG_BREAK_MIN=$D_LB_MIN
 LONG_BREAK_MAX=$D_LB_MAX
 GEM_CHECK_INTERVAL=$D_GEM_INT
 PRAY_INTERVAL_SECONDS=$D_PRAY_SEC
+VOTE_ENABLED=$D_VOTE
 SETEOF
     echo "   ✅ Pengaturan default dibuat (belum ada sebelumnya)."
 else

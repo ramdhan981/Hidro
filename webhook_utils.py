@@ -9,7 +9,7 @@ supaya bisa dipanggil dari akun manapun tanpa saling tabrakan.
 from datetime import datetime
 
 
-def build_embed(state, label, profile_name, gem_check_interval=20):
+def build_embed(state, label, profile_name, gem_check_interval=20, vote_enabled=True):
     elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
     log_text = "".join(f"{l}\n" for l in state["action_log"]) or "Belum ada aksi..."
     gem_text = ""
@@ -21,34 +21,37 @@ def build_embed(state, label, profile_name, gem_check_interval=20):
     if state["grand_total"] % gem_check_interval == 0 and state["grand_total"] > 0:
         next_check = gem_check_interval
 
+    fields = [
+        {"name": "📊 Statistik", "value": (
+            f"```\nTotal H+B  : {state['grand_total']}\n"
+            f"Hunt       : {state['hunt_count']}\n"
+            f"Battle     : {state['battle_count']}\n"
+            f"Runtime    : {elapsed}\n"
+            f"Next Check : {next_check} H+B lagi\n```"
+        ), "inline": False},
+        {"name": "⏱️ Status", "value": (
+            f"```\nStatus : {state['pause_status']}\n```"
+        ), "inline": False},
+        {"name": "💎 Gem Status", "value": f"```\n{gem_text}```", "inline": False},
+    ]
+    if vote_enabled:
+        fields.append({"name": "🗳️ Vote", "value": f"```\n{state['vote_status']}\n```", "inline": False})
+    fields.append({"name": "🙏 Pray", "value": f"```\n{state['pray_status']}\n```", "inline": False})
+    fields.append({"name": "📅 Daily", "value": f"```\n{state['daily_status']}\n```", "inline": False})
+    fields.append({"name": "📋 Log Terbaru", "value": f"```\n{log_text}```", "inline": False})
+
     return {
         "title": f"🤖 OWO BOT — {profile_name}",
         "color": state["embed_color"],
         "description": f"**🆔 Akun:** `{label}`\n**👤 Profil:** {profile_name}",
-        "fields": [
-            {"name": "📊 Statistik", "value": (
-                f"```\nTotal H+B  : {state['grand_total']}\n"
-                f"Hunt       : {state['hunt_count']}\n"
-                f"Battle     : {state['battle_count']}\n"
-                f"Runtime    : {elapsed}\n"
-                f"Next Check : {next_check} H+B lagi\n```"
-            ), "inline": False},
-            {"name": "⏱️ Status", "value": (
-                f"```\nStatus : {state['pause_status']}\n```"
-            ), "inline": False},
-            {"name": "💎 Gem Status", "value": f"```\n{gem_text}```", "inline": False},
-            {"name": "🗳️ Vote", "value": f"```\n{state['vote_status']}\n```", "inline": False},
-            {"name": "🙏 Pray", "value": f"```\n{state['pray_status']}\n```", "inline": False},
-            {"name": "📅 Daily", "value": f"```\n{state['daily_status']}\n```", "inline": False},
-            {"name": "📋 Log Terbaru", "value": f"```\n{log_text}```", "inline": False},
-        ],
+        "fields": fields,
         "footer": {"text": f"🕒 {datetime.now().strftime('%H:%M:%S')} • {label}"}
     }
 
 
-def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_check_interval=20):
+def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_check_interval=20, vote_enabled=True):
     try:
-        embed = build_embed(state, label, profile_name, gem_check_interval)
+        embed = build_embed(state, label, profile_name, gem_check_interval, vote_enabled)
         if state["webhook_msg_url"] is None:
             resp = safe_request("POST", WEBHOOK_URL + "?wait=true", json={"embeds": [embed]}, max_wait=20)
             if resp and resp.status_code in (200, 201):

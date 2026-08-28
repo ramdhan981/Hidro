@@ -80,6 +80,7 @@ def load_settings():
         "LONG_BREAK_MIN": "10",
         "LONG_BREAK_MAX": "17",
         "GEM_CHECK_INTERVAL": "20",
+        "GEM_CHECK_ENABLED": "y",
         "PRAY_INTERVAL_SECONDS": "300",
         "VOTE_ENABLED": "y",
     }
@@ -107,6 +108,7 @@ LONG_BREAK_TRIGGER = int(SETTINGS["LONG_BREAK_TRIGGER"])
 LONG_BREAK_MIN = float(SETTINGS["LONG_BREAK_MIN"])
 LONG_BREAK_MAX = float(SETTINGS["LONG_BREAK_MAX"])
 GEM_CHECK_INTERVAL = int(SETTINGS["GEM_CHECK_INTERVAL"])
+GEM_CHECK_ENABLED = SETTINGS["GEM_CHECK_ENABLED"].strip().lower() == "y"
 PRAY_INTERVAL_SECONDS = int(SETTINGS["PRAY_INTERVAL_SECONDS"])
 VOTE_ENABLED = SETTINGS["VOTE_ENABLED"].strip().lower() == "y"
 
@@ -456,6 +458,8 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         return None
 
     def get_inventory_and_equip(force=False):
+        if not GEM_CHECK_ENABLED:
+            return
         if not state["gems_need"] and not force:
             return
         if force:
@@ -530,6 +534,8 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         send_webhook()
 
     def check_gem_expiry(hunt_response):
+        if not GEM_CHECK_ENABLED:
+            return
         if not hunt_response or len(hunt_response.strip()) < 10:
             return
         matches = re.findall(r"\[(\d+)/(\d+)\]", hunt_response)
@@ -752,7 +758,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 pause_secs = round(random.uniform(JEDA_MIN, JEDA_MAX), 1)
                 system_pause(pause_secs, "Jeda H+B", show_status=False)
 
-            if state["grand_total"] % GEM_CHECK_INTERVAL == 0 and state["grand_total"] > 0:
+            if GEM_CHECK_ENABLED and state["grand_total"] % GEM_CHECK_INTERVAL == 0 and state["grand_total"] > 0:
                 log(f"🎒 Cek inventory rutin (setiap {GEM_CHECK_INTERVAL} H+B)...")
                 send_webhook()
                 state["gems_need"] = list(GEM_CODES.keys())

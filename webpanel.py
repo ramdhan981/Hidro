@@ -25,9 +25,12 @@ def build_status_payload():
     for acc_id, info in items:
         state = info["state"]
         elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
-        gem_text = ", ".join(
-            f"{g}:{v}" for g, v in state["gem_counter_state"].items()
-        ) or "Belum terdeteksi"
+        if state.get("gem_enabled", True):
+            gem_text = ", ".join(
+                f"{g}:{v}" for g, v in state["gem_counter_state"].items()
+            ) or "Belum terdeteksi"
+        else:
+            gem_text = "🚫 Dinonaktifkan"
         raw_status = state["pause_status"]
         simple_status = "Off" if "dihentikan" in raw_status.lower() else "Aktif"
         accounts.append({

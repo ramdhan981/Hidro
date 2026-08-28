@@ -141,9 +141,12 @@ def render_dashboard():
         label = info["label"]
         elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
 
-        gem_text = ", ".join(
-            f"{g}:{v}" for g, v in state["gem_counter_state"].items()
-        ) or "Belum terdeteksi"
+        if state.get("gem_enabled", True):
+            gem_text = ", ".join(
+                f"{g}:{v}" for g, v in state["gem_counter_state"].items()
+            ) or "Belum terdeteksi"
+        else:
+            gem_text = "🚫 Dinonaktifkan"
 
         lines.append(f"\n{label} {profile_name}")
         lines.append(f"  Status     : {state['pause_status']}")
@@ -232,6 +235,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         "is_paused": False,
         "last_vote_time": None,
         "vote_status": "Belum dicek" if VOTE_ENABLED else "🚫 Dinonaktifkan",
+        "gem_enabled": GEM_CHECK_ENABLED,
         "last_pray_time": None,
         "pray_status": "Belum dicek",
         "daily_done": False,

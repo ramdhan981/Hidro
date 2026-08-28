@@ -12,10 +12,13 @@ from datetime import datetime
 def build_embed(state, label, profile_name, gem_check_interval=20, vote_enabled=True):
     elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
     log_text = "".join(f"{l}\n" for l in state["action_log"]) or "Belum ada aksi..."
-    gem_text = ""
-    for g, v in state["gem_counter_state"].items():
-        gem_text += f"{g[:14].ljust(14)}: {v}\n"
-    gem_text = gem_text or "Belum terdeteksi"
+    if state.get("gem_enabled", True):
+        gem_text = ""
+        for g, v in state["gem_counter_state"].items():
+            gem_text += f"{g[:14].ljust(14)}: {v}\n"
+        gem_text = gem_text or "Belum terdeteksi"
+    else:
+        gem_text = "🚫 Dinonaktifkan"
 
     next_check = gem_check_interval - (state["grand_total"] % gem_check_interval)
     if state["grand_total"] % gem_check_interval == 0 and state["grand_total"] > 0:

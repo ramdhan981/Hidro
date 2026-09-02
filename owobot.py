@@ -83,6 +83,7 @@ def load_settings():
         "GEM_CHECK_ENABLED": "y",
         "PRAY_INTERVAL_SECONDS": "300",
         "VOTE_ENABLED": "y",
+        "PRAY_ENABLED": "y",
     }
     try:
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
@@ -111,6 +112,7 @@ GEM_CHECK_INTERVAL = int(SETTINGS["GEM_CHECK_INTERVAL"])
 GEM_CHECK_ENABLED = SETTINGS["GEM_CHECK_ENABLED"].strip().lower() == "y"
 PRAY_INTERVAL_SECONDS = int(SETTINGS["PRAY_INTERVAL_SECONDS"])
 VOTE_ENABLED = SETTINGS["VOTE_ENABLED"].strip().lower() == "y"
+PRAY_ENABLED = SETTINGS["PRAY_ENABLED"].strip().lower() == "y"
 
 # ============================================================
 # Web panel (owoweb) & webhook Discord — dipindah ke file terpisah
@@ -237,7 +239,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         "vote_status": "Belum dicek" if VOTE_ENABLED else "🚫 Dinonaktifkan",
         "gem_enabled": GEM_CHECK_ENABLED,
         "last_pray_time": None,
-        "pray_status": "Belum dicek",
+        "pray_status": "Belum dicek" if PRAY_ENABLED else "🚫 Dinonaktifkan",
         "daily_done": False,
         "daily_status": "Belum dicek",
         "cash_status": "Belum dicek",
@@ -769,7 +771,8 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 get_inventory_and_equip(force=True)
                 system_pause(random.randint(5, 8), "Jeda Inventory", show_status=False)
 
-            auto_pray()
+            if PRAY_ENABLED:
+                auto_pray()
             if VOTE_ENABLED:
                 auto_vote()
 

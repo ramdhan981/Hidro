@@ -12,4 +12,4 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
           -d "{\"content\": \"@everyone 🚀 UPDATE SCRIPT **Hidro**!\n${{ github.event.head_commit.message }}\", \"allowed_mentions\": {\"parse\": [\"everyone\"]}}" \
-          "${{ secrets.DISCORD_WEBHOOK_ }}"
+          "${{ secrets.DISCORD_WEBHOOK }}"

@@ -82,49 +82,101 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
               <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
               <title>OWO Bot Status</title>
               <style>
+                :root {
+                  --bg-base: #0A0E17;
+                  --panel: #121826;
+                  --panel-border: #232C3F;
+                  --panel-border-soft: #1B2333;
+                  --text: #E7ECF5;
+                  --text-muted: #8B96AC;
+                  --teal: #3DD6C4;
+                  --amber: #F5A524;
+                  --red: #E5484D;
+                  --mono: ui-monospace, SFMono-Regular, "Roboto Mono", Menlo, Consolas, monospace;
+                  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+                }
+                * { box-sizing: border-box; }
                 body {
-                  font-family: Arial, sans-serif; margin: 0; color: #f8fafc;
-                  background-image: linear-gradient(rgba(10,10,20,0.72), rgba(10,10,20,0.82)), url('data:image/jpeg;base64,__BG_IMAGE__');
+                  font-family: var(--sans); margin: 0; color: var(--text);
+                  background-image: linear-gradient(180deg, rgba(8,10,16,0.86), rgba(8,10,16,0.93)), url('data:image/jpeg;base64,__BG_IMAGE__');
                   background-size: cover;
                   background-position: center;
                   background-attachment: fixed;
                   background-repeat: no-repeat;
                   min-height: 100vh;
+                  -webkit-font-smoothing: antialiased;
                 }
-                .card { background: rgba(17,24,39,0.82); backdrop-filter: blur(4px); border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-                .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-                .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-                .btn { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 8px 12px; cursor: pointer; margin: 4px; font-size: 0.9em; }
-                .btn.secondary { background: #475569; }
-                .btn.danger { background: #dc2626; }
-                .btn.small { padding: 6px 10px; font-size: 0.8em; }
-                .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-                .small { color: #94a3b8; font-size: 0.92em; }
-                pre { background: #020617; padding: 10px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; }
-                .status-ok { color: #4ade80; }
-                .status-warn { color: #fbbf24; }
-                .btn-group { display: flex; gap: 4px; flex-wrap: wrap; }
-                .acc-summary { padding: 8px; background: #1e293b; border-radius: 8px; margin-bottom: 8px; }
+                .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
+                .header-bar {
+                  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+                  padding: 4px 4px 22px; border-bottom: 1px solid var(--panel-border-soft); margin-bottom: 20px;
+                }
+                .header-bar h2 { margin: 0; font-size: 1.35em; font-weight: 700; letter-spacing: -0.01em; }
+                .header-bar .small { margin-top: 4px; }
+                .card {
+                  background: rgba(18,24,38,0.86); backdrop-filter: blur(6px);
+                  border: 1px solid var(--panel-border); border-radius: 10px;
+                  padding: 18px; margin-bottom: 16px;
+                }
+                .summary-strip {
+                  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+                  font-family: var(--mono); font-size: 0.9em; letter-spacing: 0.01em;
+                }
+                .summary-strip .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+                .dot-ok { background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+                .dot-warn { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+                .btn {
+                  background: var(--teal); color: #04211D; border: none; border-radius: 7px;
+                  padding: 9px 14px; cursor: pointer; margin: 3px; font-size: 0.88em; font-weight: 600;
+                  transition: transform 0.12s ease, filter 0.12s ease;
+                }
+                .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+                .btn:active { transform: translateY(0); }
+                .btn.secondary { background: #2A3348; color: var(--text); }
+                .btn.danger { background: var(--red); color: #2A0A0B; }
+                .btn.sm { padding: 7px 11px; font-size: 0.8em; width: 100%; }
+                .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+                .stat-tile { background: #0C1220; border: 1px solid var(--panel-border-soft); border-radius: 7px; padding: 8px 10px; }
+                .stat-tile .stat-label { color: var(--text-muted); font-size: 0.76em; }
+                .stat-tile .stat-value { font-family: var(--mono); font-size: 1.05em; font-weight: 600; margin-top: 2px; }
+                .small { color: var(--text-muted); font-size: 0.9em; line-height: 1.5; }
+                pre {
+                  background: #060A12; padding: 10px 12px; border-radius: 7px; overflow-x: auto;
+                  white-space: pre-wrap; font-family: var(--mono); font-size: 0.82em; color: #A8B3C7;
+                  border: 1px solid var(--panel-border-soft); margin-top: 8px;
+                }
+                .status-ok { color: var(--teal); font-weight: 600; }
+                .status-warn { color: var(--amber); font-weight: 600; }
+                .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+                .acc-card { display: flex; gap: 14px; padding-left: 14px; border-left: 3px solid var(--panel-border-soft); }
+                .acc-card.is-active { border-left-color: var(--teal); }
+                .acc-card.is-off { border-left-color: var(--red); }
+                .acc-avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--panel-border); }
+                .acc-avatar-empty { width: 44px; height: 44px; border-radius: 50%; background: #232C3F; flex-shrink: 0; }
+                .acc-title { margin: 0 0 8px; font-size: 1.02em; font-weight: 600; }
+                .acc-actions { min-width: 108px; display: flex; flex-direction: column; gap: 6px; }
+                @media (max-width: 640px) {
+                  .acc-card { flex-direction: column; }
+                  .acc-actions { min-width: 0; flex-direction: row; }
+                  .btn.sm { width: auto; flex: 1; }
+                }
               </style>
             </head>
             <body>
               <div class=\"wrap\">
-                <div class=\"card\">
-                  <div class=\"top\">
-                    <div>
-                      <h2 style=\"margin:0\">OWO Bot Status Panel</h2>
-                      <div class=\"small\">Private local panel — only accessible on this computer via localhost</div>
-                    </div>
-                    <div>
-                      <button class=\"btn secondary\" onclick=\"sendCommand('pause', null)\">⏸️ Pause Semua</button>
-                      <button class=\"btn\" onclick=\"sendCommand('resume', null)\">▶️ Resume Semua</button>
-                      <button class=\"btn danger\" onclick=\"sendCommand('stop', null)\">⛔ Stop Semua</button>
-                    </div>
+                <div class=\"header-bar\">
+                  <div>
+                    <h2>OWO Bot Status Panel</h2>
+                    <div class=\"small\">Panel lokal privat — hanya bisa diakses dari komputer ini via localhost</div>
+                  </div>
+                  <div class=\"btn-group\">
+                    <button class=\"btn secondary\" onclick=\"sendCommand('pause', null)\">⏸️ Pause Semua</button>
+                    <button class=\"btn\" onclick=\"sendCommand('resume', null)\">▶️ Resume Semua</button>
+                    <button class=\"btn danger\" onclick=\"sendCommand('stop', null)\">⛔ Stop Semua</button>
                   </div>
                 </div>
                 <div class=\"card\">
-                  <h3 style=\"margin-top:0\">Status Bot</h3>
-                  <div id=\"summary\">Memuat...</div>
+                  <div id=\"summary\" class=\"summary-strip\">Memuat...</div>
                 </div>
                 <div id=\"accounts\"></div>
               </div>
@@ -141,44 +193,42 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
                     const res = await fetch('/api/status');
                     const data = await res.json();
                     const summary = document.getElementById('summary');
-                    summary.innerHTML = '<strong>Status:</strong> ' + (data.running ? '<span class=\"status-ok\">Berjalan</span>' : '<span class=\"status-warn\">Dihentikan</span>') + ' <span class=\"small\">• Total Akun: ' + data.accounts.length + ' • Terakhir diperbarui ' + data.timestamp + '</span>';
+                    const dotClass = data.running ? 'dot-ok' : 'dot-warn';
+                    const statusClass = data.running ? 'status-ok' : 'status-warn';
+                    const statusText = data.running ? 'Berjalan' : 'Dihentikan';
+                    summary.innerHTML = '<span class=\"dot ' + dotClass + '\"></span><span class=\"' + statusClass + '\">' + statusText + '</span><span class=\"small\">Total Akun: ' + data.accounts.length + '</span><span class=\"small\">Diperbarui ' + data.timestamp + '</span>';
                     const accounts = document.getElementById('accounts');
                     if (!data.accounts.length) {
                       accounts.innerHTML = '<div class=\"card\"><strong>Belum ada akun aktif.</strong></div>';
                       return;
                     }
-                    accounts.innerHTML = data.accounts.map(acc => `
-                      <div class=\"card\">
-                        <div style=\"display: flex; justify-content: space-between; align-items: start; gap: 12px;\">
-                          <div style=\"display:flex; align-items:center; gap:10px; flex:1;\">
-                            ${acc.avatar_url ? `<img src=\"${acc.avatar_url}\" alt=\"avatar\" style=\"width:44px;height:44px;border-radius:50%;flex-shrink:0;border:2px solid #334155;\">` : `<div style=\"width:44px;height:44px;border-radius:50%;background:#334155;flex-shrink:0;\"></div>`}
-                          <div style=\"flex: 1;\">
-                            <h4 style=\"margin-top:0;margin-bottom:8px\">${escapeHtml(acc.label)} — ${escapeHtml(acc.profile_name)}</h4>
+                    accounts.innerHTML = data.accounts.map(acc => {
+                      const stateClass = acc.status === 'Aktif' ? 'is-active' : 'is-off';
+                      return `
+                      <div class=\"card acc-card ${stateClass}\">
+                        <div style=\"display:flex; align-items:center; gap:10px; flex:1; min-width:0;\">
+                          ${acc.avatar_url ? `<img src=\"${acc.avatar_url}\" alt=\"avatar\" class=\"acc-avatar\">` : `<div class=\"acc-avatar-empty\"></div>`}
+                          <div style=\"flex: 1; min-width:0;\">
+                            <h4 class=\"acc-title\">${escapeHtml(acc.label)} — ${escapeHtml(acc.profile_name)}</h4>
                             <div class=\"grid\">
-                              <div><strong>Status</strong><br>${escapeHtml(acc.status)}</div>
-                              <div><strong>H+B</strong><br>${escapeHtml(acc.grand_total)}</div>
-                              <div><strong>Hunt</strong><br>${escapeHtml(acc.hunt_count)}</div>
-                              <div><strong>Battle</strong><br>${escapeHtml(acc.battle_count)}</div>
+                              <div class=\"stat-tile\"><div class=\"stat-label\">Status</div><div class=\"stat-value ${acc.status === 'Aktif' ? 'status-ok' : 'status-warn'}\">${escapeHtml(acc.status)}</div></div>
+                              <div class=\"stat-tile\"><div class=\"stat-label\">Hunt+Battle</div><div class=\"stat-value\">${escapeHtml(acc.grand_total)}</div></div>
+                              <div class=\"stat-tile\"><div class=\"stat-label\">Hunt</div><div class=\"stat-value\">${escapeHtml(acc.hunt_count)}</div></div>
+                              <div class=\"stat-tile\"><div class=\"stat-label\">Battle</div><div class=\"stat-value\">${escapeHtml(acc.battle_count)}</div></div>
                             </div>
-                            <div class=\"small\" style=\"margin-top:8px\">Runtime: ${escapeHtml(acc.runtime)}</div>
+                            <div class=\"small\" style=\"margin-top:10px\">Runtime: ${escapeHtml(acc.runtime)}</div>
                             <div class=\"small\">Gem: ${escapeHtml(acc.gems)}</div>
-                            <div class=\"small\">Vote: ${escapeHtml(acc.vote)}</div>
-                            <div class=\"small\">Pray: ${escapeHtml(acc.pray)}</div>
-                            <div class=\"small\">Daily: ${escapeHtml(acc.daily)}</div>
-                            <div class=\"small\">Cash: ${escapeHtml(acc.cash)}</div>
+                            <div class=\"small\">Vote: ${escapeHtml(acc.vote)} • Pray: ${escapeHtml(acc.pray)} • Daily: ${escapeHtml(acc.daily)} • Cash: ${escapeHtml(acc.cash)}</div>
                             <pre>${escapeHtml(acc.logs.join('\\n'))}</pre>
                           </div>
-                          </div>
-                          <div style=\"min-width: 120px;\">
-                            <div class=\"btn-group\" style=\"flex-direction: column;\">
-                              <button class=\"btn secondary btn-small\" onclick=\"sendCommand('pause', ${acc.id})\">⏸️ Pause</button>
-                              <button class=\"btn btn-small\" onclick=\"sendCommand('resume', ${acc.id})\">▶️ Resume</button>
-                              <button class=\"btn danger btn-small\" onclick=\"sendCommand('stop', ${acc.id})\">⛔ Stop</button>
-                            </div>
-                          </div>
+                        </div>
+                        <div class=\"acc-actions\">
+                          <button class=\"btn secondary sm\" onclick=\"sendCommand('pause', ${acc.id})\">⏸️ Pause</button>
+                          <button class=\"btn sm\" onclick=\"sendCommand('resume', ${acc.id})\">▶️ Resume</button>
+                          <button class=\"btn danger sm\" onclick=\"sendCommand('stop', ${acc.id})\">⛔ Stop</button>
                         </div>
                       </div>
-                    `).join('');
+                    `; }).join('');
                   } catch (err) {
                     document.getElementById('summary').innerHTML = '<span class=\"status-warn\">Gagal memuat status. Coba refresh.</span>';
                     console.error(err);

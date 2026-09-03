@@ -32,7 +32,13 @@ def build_status_payload():
         else:
             gem_text = "🚫 Dinonaktifkan"
         raw_status = state["pause_status"]
-        simple_status = "Off" if "dihentikan" in raw_status.lower() else "Aktif"
+        raw_lower = raw_status.lower()
+        if "dihentikan" in raw_lower:
+            simple_status = "Off"
+        elif "pause" in raw_lower:
+            simple_status = "Pause"
+        else:
+            simple_status = "Aktif"
         accounts.append({
             "id": acc_id,
             "label": info["label"],
@@ -147,9 +153,11 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
                 }
                 .status-ok { color: var(--teal); font-weight: 600; }
                 .status-warn { color: var(--amber); font-weight: 600; }
+                .status-off { color: var(--red); font-weight: 600; }
                 .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
                 .acc-card { display: flex; gap: 14px; padding-left: 14px; border-left: 3px solid var(--panel-border-soft); }
                 .acc-card.is-active { border-left-color: var(--teal); }
+                .acc-card.is-paused { border-left-color: var(--amber); }
                 .acc-card.is-off { border-left-color: var(--red); }
                 .acc-avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--panel-border); }
                 .acc-avatar-empty { width: 44px; height: 44px; border-radius: 50%; background: #232C3F; flex-shrink: 0; }
@@ -203,7 +211,8 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
                       return;
                     }
                     accounts.innerHTML = data.accounts.map(acc => {
-                      const stateClass = acc.status === 'Aktif' ? 'is-active' : 'is-off';
+                      const stateClass = acc.status === 'Aktif' ? 'is-active' : (acc.status === 'Pause' ? 'is-paused' : 'is-off');
+                      const valueClass = acc.status === 'Aktif' ? 'status-ok' : (acc.status === 'Pause' ? 'status-warn' : 'status-off');
                       return `
                       <div class=\"card acc-card ${stateClass}\">
                         <div style=\"display:flex; align-items:center; gap:10px; flex:1; min-width:0;\">
@@ -211,7 +220,7 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
                           <div style=\"flex: 1; min-width:0;\">
                             <h4 class=\"acc-title\">${escapeHtml(acc.label)} — ${escapeHtml(acc.profile_name)}</h4>
                             <div class=\"grid\">
-                              <div class=\"stat-tile\"><div class=\"stat-label\">Status</div><div class=\"stat-value ${acc.status === 'Aktif' ? 'status-ok' : 'status-warn'}\">${escapeHtml(acc.status)}</div></div>
+                              <div class=\"stat-tile\"><div class=\"stat-label\">Status</div><div class=\"stat-value ${valueClass}\">${escapeHtml(acc.status)}</div></div>
                               <div class=\"stat-tile\"><div class=\"stat-label\">Hunt+Battle</div><div class=\"stat-value\">${escapeHtml(acc.grand_total)}</div></div>
                               <div class=\"stat-tile\"><div class=\"stat-label\">Hunt</div><div class=\"stat-value\">${escapeHtml(acc.hunt_count)}</div></div>
                               <div class=\"stat-tile\"><div class=\"stat-label\">Battle</div><div class=\"stat-value\">${escapeHtml(acc.battle_count)}</div></div>

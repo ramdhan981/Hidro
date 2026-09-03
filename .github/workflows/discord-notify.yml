@@ -1,0 +1,15 @@
+name: Notify Discord
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kirim notifikasi ke Discord
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d "{\"content\": \"@everyone 🚀 UPDATE SCRIPT **Hidro**!\n${{ github.event.head_commit.message }}\", \"allowed_mentions\": {\"parse\": [\"everyone\"]}}" \
+          "${{ secrets.DISCORD_WEBHOOK_URL }}"

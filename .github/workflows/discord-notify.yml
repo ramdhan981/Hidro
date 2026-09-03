@@ -1,4 +1,4 @@
-name: Notify Discord
+name:DISCORD_WEBHOOK
 
 on:
   push:

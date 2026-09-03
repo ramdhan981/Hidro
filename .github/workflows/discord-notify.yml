@@ -1,4 +1,4 @@
-name:DISCORD_WEBHOOK
+name: DISCORD_WEBHOOK
 
 on:
   push:

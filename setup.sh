@@ -14,7 +14,7 @@ if [ "$1" == "start" ]; then
         cd ~/owobot && nohup python owobot.py > ~/owobot/bot.log 2>&1 &
         echo "✅ Bot berjalan di latar belakang!"
         echo "   Lihat log  : tail -f ~/owobot/bot.log"
-        echo "   Stop bot   : pkill -f owobot.py"
+        echo "   Stop bot   : owostop"
         exit 0
     else
         echo "⚠️  File owobot.py tidak ditemukan!"
@@ -411,7 +411,13 @@ EOF
 
 cat > "$BIN_DIR/owostop" << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
-pkill -f owobot.py && echo "Bot dihentikan!"
+pid=$(ps aux | grep '[o]wobot.py' | awk '{print $2}')
+if [ -n "$pid" ]; then
+    kill -9 $pid
+    echo "✅ Bot dihentikan (PID $pid)"
+else
+    echo "⚠️ Bot tidak sedang berjalan"
+fi
 EOF
 
 cat > "$BIN_DIR/oworeset" << 'EOF'
@@ -439,7 +445,7 @@ echo "✅ Bot berjalan di latar belakang!"
 echo "   Termux bisa ditutup, bot tetap jalan!"
 echo ""
 echo "   Lihat log  : tail -f ~/owobot/bot.log"
-echo "   Stop bot   : pkill -f owobot.py"
+echo "   Stop bot   : owostop"
 echo ""
 echo "=================================="
 echo "  📋 SHORTCUT YANG BISA DIPAKAI:"

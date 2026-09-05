@@ -235,6 +235,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         "gems_need": list(GEM_CODES.keys()),
         "gems_use": "",
         "is_paused": False,
+        "stop_requested": False,
         "last_vote_time": None,
         "vote_status": "Belum dicek" if VOTE_ENABLED else "🚫 Dinonaktifkan",
         "gem_enabled": GEM_CHECK_ENABLED,
@@ -655,7 +656,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         if show_status:
             state["pause_status"] = f"⏸️ {label_text}"
         while remaining > 0:
-            if shutdown_event.is_set():
+            if shutdown_event.is_set() or state["stop_requested"]:
                 return
             state["pause_seconds"] = remaining
             elapsed = total_secs - remaining
@@ -682,9 +683,9 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
     auto_check_cash()
 
     try:
-        while not shutdown_event.is_set():
+        while not shutdown_event.is_set() and not state["stop_requested"]:
             if handle_captcha_check():
-                if shutdown_event.is_set():
+                if shutdown_event.is_set() or state["stop_requested"]:
                     break
                 continue
 
@@ -707,7 +708,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     "content": "🧪 Alert percobaan terkirim ke webhook! Cek apakah ping <@USER> dan @everyone masuk."
                 }, headers=headers)
 
-            while state["is_paused"] and not shutdown_event.is_set():
+            while state["is_paused"] and not shutdown_event.is_set() and not state["stop_requested"]:
                 time.sleep(5)
                 send_webhook()
                 if check_discord_cmd() == "start":
@@ -718,7 +719,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     send_webhook()
                     break
 
-            if shutdown_event.is_set():
+            if shutdown_event.is_set() or state["stop_requested"]:
                 break
 
             before_id = get_last_msg_id()
@@ -741,7 +742,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 check_gem_expiry(hunt_resp)
 
             if handle_captcha_check():
-                if shutdown_event.is_set():
+                if shutdown_event.is_set() or state["stop_requested"]:
                     break
                 continue
 
@@ -781,6 +782,12 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             state["embed_color"] = 0xFF0000
             send_webhook()
             print(f"\n{label} Dihentikan (perintah exit/CTRL+C).")
+        elif state["stop_requested"]:
+            state["pause_status"] = "⛔ Bot telah dihentikan"
+            state["embed_color"] = 0xFF0000
+            send_webhook()
+            print(f"\n{label} Dihentikan (stop manual dari panel web).")
+            return
 
     except KeyboardInterrupt:
         state["pause_status"] = "⛔ Bot telah dihentikan"

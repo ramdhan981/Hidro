@@ -311,18 +311,20 @@ class OwoStatusHandler(BaseHTTPRequestHandler):
                             st["embed_color"] = 0x57F287
             elif action == "stop":
                 if acc_id:
-                    # Stop satu akun (tandai untuk dihentikan)
+                    # Stop satu akun secara total (bukan cuma pause)
                     with dashboard_lock:
                         if acc_id in all_accounts_state:
                             st = all_accounts_state[acc_id]["state"]
+                            st["stop_requested"] = True
                             st["is_paused"] = True
                             st["pause_status"] = "⛔ Bot telah dihentikan"
                             st["embed_color"] = 0xFF0000
                 else:
-                    # Stop semua
+                    # Stop semua akun secara total
                     with dashboard_lock:
                         for info in all_accounts_state.values():
                             st = info["state"]
+                            st["stop_requested"] = True
                             st["pause_status"] = "⛔ Bot telah dihentikan"
                             st["embed_color"] = 0xFF0000
                     shutdown_event.set()

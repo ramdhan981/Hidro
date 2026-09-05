@@ -11,5 +11,5 @@ jobs:
       - name: Kirim notifikasi ke Discord
         run: |
           curl -H "Content-Type: application/json" \
-          -d "{\"content\": \"@everyone 🚀 UPDATE SCRIPT **Hidro**!\n${{ github.event.head_commit.message }}\", \"allowed_mentions\": {\"parse\": [\"everyone\"]}}" \
+          -d "{\"content\": \"@everyone bot update silahkan execute ulang ditermux jika ingin mencoba🚀🚀\", \"allowed_mentions\": {\"parse\": [\"everyone\"]}}" \
           "${{ secrets.DISCORD_WEBHOOK }}"

@@ -8,6 +8,11 @@ supaya bisa dipanggil dari akun manapun tanpa saling tabrakan.
 """
 from datetime import datetime
 
+# Kode emoji custom Discord
+EMOJI_STOP = "<a:zred:1482034038968684575>"
+EMOJI_RUNNING = "<a:zgreen:1482033962561048778>"
+EMOJI_ALERT = "<a:blue_siren:1524500887391699044>"
+
 
 def build_embed(state, label, profile_name, gem_check_interval=20, vote_enabled=True):
     elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
@@ -43,8 +48,10 @@ def build_embed(state, label, profile_name, gem_check_interval=20, vote_enabled=
     fields.append({"name": "📅 Daily", "value": f"```\n{state['daily_status']}\n```", "inline": False})
     fields.append({"name": "📋 Log Terbaru", "value": f"```\n{log_text}```", "inline": False})
 
+    status_emoji = EMOJI_RUNNING if "aktif" in state["pause_status"].lower() else EMOJI_STOP
+
     return {
-        "title": f"🤖 OWO BOT — {profile_name}",
+        "title": f"{status_emoji} OWO BOT — {profile_name}",
         "color": state["embed_color"],
         "description": f"**🆔 Akun:** `{label}`\n**👤 Profil:** {profile_name}",
         "fields": fields,
@@ -81,13 +88,13 @@ def send_alert(state, msg_content, WEBHOOK_URL, PING_USER_ID, label, profile_nam
                 f"Kalau ping <@USER_ID> dan @everyone masuk, sistem alert berjalan normal."
             )
         else:
-            title = "🚨 CAPTCHA / BAN DETECTED!"
+            title = f"{EMOJI_ALERT} CAPTCHA / BAN DETECTED!"
             desc_intro = f"**{label} - {profile_name}** dihentikan otomatis!\n\n"
             content_text = f"<@{PING_USER_ID}> @everyone 🚨 **{label} - {profile_name} KENA CAPTCHA! BOT DIHENTIKAN!**"
             next_steps = (
                 f"**✅ Langkah selanjutnya:**\n"
                 f"1. Selesaikan captcha di Discord\n"
-                f"2. Ketik `.startbot` di channel ini, ATAU\n"
+                f"2. Ketik `.startbot` di channel kalian afk, ATAU\n"
                 f"3. Tekan tombol ▶️ Resume di panel web (`owoweb`)"
             )
 

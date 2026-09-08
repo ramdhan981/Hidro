@@ -330,10 +330,10 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
     def send_webhook():
         webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, GEM_CHECK_INTERVAL, VOTE_ENABLED)
 
-    def send_alert(msg_content, is_test=False):
+    def send_alert(msg_content, image_url=None, is_test=False):
         webhook_utils.send_alert(
             state, msg_content, WEBHOOK_URL, PING_USER_ID, label, profile_name,
-            safe_request, is_test
+            safe_request, is_test, image_url=image_url
         )
 
     def get_last_msg_id():
@@ -388,6 +388,22 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
                     component_text = extract_components_text(msg.get("components", []))
 
+                    # Ambil URL gambar kalau pesan captcha ada lampiran/embed gambar
+                    image_url = None
+                    attachments = msg.get("attachments", [])
+                    if attachments:
+                        image_url = attachments[0].get("url") or attachments[0].get("proxy_url")
+                    if not image_url:
+                        for emb in msg.get("embeds", []):
+                            img = emb.get("image", {}) or {}
+                            if img.get("url"):
+                                image_url = img["url"]
+                                break
+                            thumb = emb.get("thumbnail", {}) or {}
+                            if thumb.get("url"):
+                                image_url = thumb["url"]
+                                break
+
                     msg_content = (raw_content + " " + embed_text + " " + component_text).strip()
                     if not msg_content:
                         continue
@@ -400,39 +416,39 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                         match = re.search(warning_pattern, msg_lower)
                         if match:
                             if int(match.group(1)) >= 1:
-                                return True, msg_content
+                                return True, msg_content, image_url
 
                     if "are you a real human" in msg_lower and "please use the link" in msg_lower:
-                        return True, msg_content
+                        return True, msg_content, image_url
 
                     if "please complete this within" in msg_lower and "result in a ban" in msg_lower:
-                        return True, msg_content
+                        return True, msg_content, image_url
 
                     if "please complete your captcha" in msg_lower and "verify that you are human" in msg_lower:
-                        return True, msg_content
+                        return True, msg_content, image_url
 
                     if "banned for" in msg_lower or "macros or botting" in msg_lower:
-                        return True, msg_content
+                        return True, msg_content, image_url
 
                     if "type the code from the image in this channel" in msg_lower:
-                        return True, msg_content
+                        return True, msg_content, image_url
 
                     if "ketik code dari gambar di channel ini" in msg_lower:
-                        return True, msg_content
+                        return True, msg_content, image_url
 
                     for kw in HUMAN_KEYWORDS:
                         if kw in msg_lower:
-                            return True, msg_content
+                            return True, msg_content, image_url
         except Exception:
             pass
-        return False, ""
+        return False, "", None
 
     def handle_captcha_check():
         """True kalau captcha terdeteksi & sudah ditangani (loop utama harus 'continue')."""
-        detected, tmsg = check_human()
+        detected, tmsg, timg = check_human()
         if not detected:
             return False
-        send_alert(tmsg)
+        send_alert(tmsg, image_url=timg)
         state["is_paused"] = True
         state["pause_status"] = "🚨 CAPTCHA - Verifikasi manual dulu!"
         state["embed_color"] = 0xFF0000
@@ -667,9 +683,9 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     pass
             if remaining % 10 == 0:
                 send_webhook()
-                detected, tmsg = check_human()
+                detected, tmsg, timg = check_human()
                 if detected:
-                    send_alert(tmsg)
+                    send_alert(tmsg, image_url=timg)
                     sys.exit()
             time.sleep(1)
             remaining -= 1

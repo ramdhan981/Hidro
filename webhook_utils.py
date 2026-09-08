@@ -76,7 +76,7 @@ def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_chec
         pass
 
 
-def send_alert(state, msg_content, WEBHOOK_URL, PING_USER_ID, label, profile_name, safe_request, is_test=False):
+def send_alert(state, msg_content, WEBHOOK_URL, PING_USER_ID, label, profile_name, safe_request, is_test=False, image_url=None):
     try:
         if is_test:
             title = "🧪 TES ALERT (.testalert)"
@@ -110,6 +110,8 @@ def send_alert(state, msg_content, WEBHOOK_URL, PING_USER_ID, label, profile_nam
             "color": 0xFF0000,
             "footer": {"text": f"{label} - Segera cek akun!"}
         }
+        if image_url:
+            embed["image"] = {"url": image_url}
         safe_request("POST", WEBHOOK_URL, json={
             "content": content_text,
             "embeds": [embed],

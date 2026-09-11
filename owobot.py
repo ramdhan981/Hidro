@@ -491,7 +491,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     state["gems_need"].append(gem)
 
         before_id = get_last_msg_id()
-        time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(0.6, 1.2))
         safe_request("POST", URL, json={"content": f"{PREFIX} inv"}, headers=headers)
 
         inv_text = ""
@@ -541,7 +541,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     break
 
         if state["gems_use"].strip():
-            time.sleep(random.uniform(1, 2))
+            time.sleep(random.uniform(0.6, 1.2))
             cmd = f"{PREFIX} use {state['gems_use'].strip()}"
             safe_request("POST", URL, json={"content": cmd}, headers=headers)
             log(f"💎 {cmd}")
@@ -588,7 +588,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             if (datetime.now() - state["last_pray_time"]).total_seconds() < PRAY_INTERVAL_SECONDS:
                 return
         before_id = get_last_msg_id()
-        time.sleep(random.uniform(0.5, 1))
+        time.sleep(random.uniform(0.3, 0.6))
         safe_request("POST", URL, json={"content": f"{PREFIX} pray"}, headers=headers)
         state["last_pray_time"] = datetime.now()
         time.sleep(2)
@@ -608,7 +608,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             if (datetime.now() - state["last_vote_time"]).total_seconds() < 43200:
                 return
         before_id = get_last_msg_id()
-        time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(0.6, 1.2))
         safe_request("POST", URL, json={"content": f"{PREFIX} vote"}, headers=headers)
         time.sleep(3)
         resp = get_owo_response(before_id, timeout=6)
@@ -630,7 +630,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         if state["daily_done"]:
             return
         before_id = get_last_msg_id()
-        time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(0.6, 1.2))
         safe_request("POST", URL, json={"content": f"{PREFIX} daily"}, headers=headers)
         time.sleep(3)
         resp = get_owo_response(before_id, timeout=6)
@@ -647,7 +647,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
     def auto_check_cash():
         before_id = get_last_msg_id()
-        time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(0.6, 1.2))
         safe_request("POST", URL, json={"content": f"{PREFIX} cash"}, headers=headers)
         time.sleep(3)
         resp = get_owo_response(before_id, timeout=6)
@@ -672,7 +672,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         if show_status:
             state["pause_status"] = f"⏸️ {label_text}"
         while remaining > 0:
-            if shutdown_event.is_set() or state["stop_requested"]:
+            if shutdown_event.is_set() or state["stop_requested"] or state["is_paused"]:
                 return
             state["pause_seconds"] = remaining
             elapsed = total_secs - remaining
@@ -681,7 +681,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     safe_request("POST", URL, json={"content": random.choice(stories)}, headers=headers)
                 except Exception:
                     pass
-            if remaining % 10 == 0:
+            if remaining % 5 == 0:
                 send_webhook()
                 detected, tmsg, timg = check_human()
                 if detected:
@@ -724,8 +724,12 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     "content": "🧪 Alert percobaan terkirim ke webhook! Cek apakah ping <@USER> dan @everyone masuk."
                 }, headers=headers)
 
+            paused_ticks = 0
             while state["is_paused"] and not shutdown_event.is_set() and not state["stop_requested"]:
-                time.sleep(5)
+                time.sleep(1)
+                paused_ticks += 1
+                if paused_ticks % 10 != 0:
+                    continue
                 send_webhook()
                 if check_discord_cmd() == "start":
                     state["is_paused"] = False
@@ -741,7 +745,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             before_id = get_last_msg_id()
 
             safe_request("POST", URL, json={"content": f"{PREFIX} hunt"}, headers=headers)
-            time.sleep(random.uniform(0.5, 1))
+            time.sleep(random.uniform(0.3, 0.6))
             safe_request("POST", URL, json={"content": f"{PREFIX} battle"}, headers=headers)
 
             state["hunt_count"] += 1
@@ -751,7 +755,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             state["counter"] += 1
 
             log(f"✅ H+B #{state['grand_total']}")
-            time.sleep(1)
+            time.sleep(0.6)
 
             hunt_resp = get_owo_response(before_id, timeout=4)
             if hunt_resp:
@@ -833,12 +837,12 @@ def interactive_config():
     print("\n" + "=" * 58)
     print("   OWO BOT - KONFIGURASI AKUN")
     print("=" * 58)
-    print("Isi data akun Discord Anda (maksimal 6 akun)")
+    print("Isi data akun Discord Anda (maksimal 10 akun)")
     print("⚠️ AKUN 1 WAJIB DIISI LENGKAP! Jika ingin skip, tekan Ctrl+C.\n")
 
     accounts = []
     
-    for i in range(1, 7):
+    for i in range(1, 11):
         print(f"\n{'='*58}")
         if i == 1:
             print(f"--- AKUN {i} (WAJIB) ---")
@@ -924,10 +928,10 @@ if not accounts:
         print(f"❌ Gagal menyimpan config: {e}")
         sys.exit(1)
 
-# Batasi maksimal 6 akun
-if len(accounts) > 6:
-    print(f"[PERINGATAN] Ditemukan {len(accounts)} akun di config.txt, hanya 6 pertama yang akan dipakai.")
-accounts = accounts[:6]
+# Batasi maksimal 10 akun
+if len(accounts) > 10:
+    print(f"[PERINGATAN] Ditemukan {len(accounts)} akun di config.txt, hanya 10 pertama yang akan dipakai.")
+accounts = accounts[:10]
 
 # ============================================================
 # VALIDASI KRITIS: Akun pertama WAJIB ada dan token tidak boleh kosong

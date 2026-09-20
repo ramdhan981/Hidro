@@ -1,25 +1,4 @@
-#!/bin/bash
 
-# ============================================================
-# Gerbang password sebelum bot dijalankan
-# - Hash password TIDAK disimpan di repo GitHub sama sekali.
-# - Disimpan di file lokal: ~/owobot/.master_hash
-#   (file ini TIDAK pernah ikut ter-download/ter-timpa oleh curl setup.sh,
-#    jadi aman biar nggak ke-push ke GitHub)
-#
-# CARA SET PERTAMA KALI DI SETIAP HP:
-#   1. echo -n "passwordkamu" | sha256sum
-#   2. Copy hasil hash-nya (72 karakter sebelum spasi)
-#   3. echo "HASIL_HASH_TADI" > ~/owobot/.master_hash
-#
-# - Login berlaku 24 jam (nggak ditanya lagi kalau masih dalam 1 hari)
-# - Tiap 7 hari, wajib login ulang walau sesi harian masih aktif (checkpoint tambahan)
-# ============================================================
-MASTER_HASH_FILE=~/owobot/.master_hash
-AUTH_SET_FILE=~/owobot/.auth_set_time
-AUTH_LOGIN_FILE=~/owobot/.auth_last_login
-WEEK_SECS=$((7 * 24 * 60 * 60))
-DAY_SECS=$((24 * 60 * 60))
 
 check_password_gate() {
     mkdir -p ~/owobot

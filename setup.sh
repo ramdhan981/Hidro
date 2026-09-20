@@ -1,5 +1,74 @@
 #!/bin/bash
 
+# ============================================================
+# Gerbang password sebelum bot dijalankan
+# - Hash password TIDAK disimpan di repo GitHub sama sekali.
+# - Disimpan di file lokal: ~/owobot/.master_hash
+#   (file ini TIDAK pernah ikut ter-download/ter-timpa oleh curl setup.sh,
+#    jadi aman biar nggak ke-push ke GitHub)
+#
+# CARA SET PERTAMA KALI DI SETIAP HP:
+#   1. echo -n "passwordkamu" | sha256sum
+#   2. Copy hasil hash-nya (72 karakter sebelum spasi)
+#   3. echo "HASIL_HASH_TADI" > ~/owobot/.master_hash
+#
+# - Login berlaku 24 jam (nggak ditanya lagi kalau masih dalam 1 hari)
+# - Tiap 7 hari, wajib login ulang walau sesi harian masih aktif (checkpoint tambahan)
+# ============================================================
+MASTER_HASH_FILE=~/owobot/.master_hash
+AUTH_SET_FILE=~/owobot/.auth_set_time
+AUTH_LOGIN_FILE=~/owobot/.auth_last_login
+WEEK_SECS=$((7 * 24 * 60 * 60))
+DAY_SECS=$((24 * 60 * 60))
+
+check_password_gate() {
+    mkdir -p ~/owobot
+    NOW=$(date +%s)
+
+    if [ ! -f "$MASTER_HASH_FILE" ]; then
+        echo "⛔ Belum ada file password (~/owobot/.master_hash)."
+        echo "   Set dulu manual: echo \"HASH_KAMU\" > ~/owobot/.master_hash"
+        exit 1
+    fi
+    MASTER_PASSWORD_HASH=$(cat "$MASTER_HASH_FILE")
+
+    SET_TIME=$(cat "$AUTH_SET_FILE" 2>/dev/null || echo 0)
+    AGE_SINCE_SET=$((NOW - SET_TIME))
+
+    if [ ! -f "$AUTH_SET_FILE" ] || [ "$AGE_SINCE_SET" -ge "$WEEK_SECS" ]; then
+        NEED_LOGIN=1
+    else
+        LAST_LOGIN=$(cat "$AUTH_LOGIN_FILE" 2>/dev/null || echo 0)
+        SESSION_AGE=$((NOW - LAST_LOGIN))
+        if [ "$SESSION_AGE" -lt "$DAY_SECS" ]; then
+            NEED_LOGIN=0
+        else
+            NEED_LOGIN=1
+        fi
+    fi
+
+    if [ "$NEED_LOGIN" -eq 0 ]; then
+        return 0
+    fi
+
+    TRIES=0
+    while [ "$TRIES" -lt 3 ]; do
+        read -s -p "🔑 Masukkan password bot: " INPUT_PASS
+        echo ""
+        INPUT_HASH=$(echo -n "$INPUT_PASS" | sha256sum | awk '{print $1}')
+        if [ "$INPUT_HASH" == "$MASTER_PASSWORD_HASH" ]; then
+            echo "$NOW" > "$AUTH_LOGIN_FILE"
+            echo "$NOW" > "$AUTH_SET_FILE"
+            return 0
+        else
+            TRIES=$((TRIES + 1))
+            echo "❌ Password salah. Percobaan $TRIES/3."
+        fi
+    done
+    echo "⛔ Gagal 3x, bot tidak dijalankan."
+    exit 1
+}
+
 clear
 echo "=================================="
 echo "     OWO BOT - AUTO SETUP"
@@ -9,6 +78,7 @@ echo ""
 # Cek argumen — kalau "start" langsung jalankan bot tanpa setup
 if [ "$1" == "start" ]; then
     if [ -f ~/owobot/owobot.py ]; then
+        check_password_gate
         echo "▶️  Melanjutkan bot di latar belakang..."
         termux-wake-lock
         cd ~/owobot && nohup python owobot.py > ~/owobot/bot.log 2>&1 &
@@ -438,6 +508,7 @@ echo "=================================="
 echo "  Setup selesai! Memulai bot..."
 echo "=================================="
 echo ""
+check_password_gate
 termux-wake-lock
 cd ~/owobot && nohup python owobot.py > ~/owobot/bot.log 2>&1 &
 echo ""

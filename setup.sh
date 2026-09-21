@@ -3,19 +3,20 @@
 # ============================================================
 # Gerbang password sebelum bot dijalankan
 # - Hash password TIDAK disimpan di repo GitHub sama sekali.
-# - Disimpan di file lokal: ~/owobot/.master_hash
+# - Disimpan di file lokal: ~/owobot/.password_config
 #   (file ini TIDAK pernah ikut ter-download/ter-timpa oleh curl setup.sh,
 #    jadi aman biar nggak ke-push ke GitHub)
 #
 # CARA SET PERTAMA KALI DI SETIAP HP:
 #   1. echo -n "passwordkamu" | sha256sum
-#   2. Copy hasil hash-nya (72 karakter sebelum spasi)
-#   3. echo "HASIL_HASH_TADI" > ~/owobot/.master_hash
+#   2. Copy hasil hash-nya (64 karakter sebelum spasi)
+#   3. nano ~/owobot/.password_config
+#      isi satu baris:  PW="HASIL_HASH_TADI"
 #
 # - Login berlaku 24 jam (nggak ditanya lagi kalau masih dalam 1 hari)
 # - Tiap 7 hari, wajib login ulang walau sesi harian masih aktif (checkpoint tambahan)
 # ============================================================
-MASTER_HASH_FILE=~/owobot/.master_hash
+PASSWORD_CONFIG_FILE=~/owobot/.password_config
 AUTH_SET_FILE=~/owobot/.auth_set_time
 AUTH_LOGIN_FILE=~/owobot/.auth_last_login
 WEEK_SECS=$((7 * 24 * 60 * 60))
@@ -25,12 +26,19 @@ check_password_gate() {
     mkdir -p ~/owobot
     NOW=$(date +%s)
 
-    if [ ! -f "$MASTER_HASH_FILE" ]; then
-        echo "⛔ Belum ada file password (~/owobot/.master_hash)."
-        echo "   Set dulu manual: echo \"HASH_KAMU\" > ~/owobot/.master_hash"
+    if [ ! -f "$PASSWORD_CONFIG_FILE" ]; then
+        echo "⛔ Belum ada file password (~/owobot/.password_config)."
+        echo "   Set dulu manual: nano ~/owobot/.password_config"
+        echo "   Isi satu baris:  PW=\"HASH_KAMU\""
         exit 1
     fi
-    MASTER_PASSWORD_HASH=$(cat "$MASTER_HASH_FILE")
+    PW=""
+    source "$PASSWORD_CONFIG_FILE"
+    if [ -z "$PW" ]; then
+        echo "⛔ File ~/owobot/.password_config ada, tapi variabel PW kosong/tidak ditemukan."
+        exit 1
+    fi
+    MASTER_PASSWORD_HASH="$PW"
 
     SET_TIME=$(cat "$AUTH_SET_FILE" 2>/dev/null || echo 0)
     AGE_SINCE_SET=$((NOW - SET_TIME))
@@ -399,8 +407,9 @@ GITHUB_USER="ramdhan981"
 GITHUB_REPO="Hidro"
 GITHUB_BRANCH="main"
 RAW_BASE="https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_REPO/$GITHUB_BRANCH"
+CB="?t=$(date +%s)"
 
-if curl -sL -f "$RAW_BASE/owobot.py" -o ~/owobot/owobot.py 2>/dev/null; then
+if curl -sL -f "$RAW_BASE/owobot.py$CB" -o ~/owobot/owobot.py 2>/dev/null; then
     echo "      ✅ owobot.py diambil dari GitHub!"
 elif [ -f /sdcard/Download/owobot.py ]; then
     cp /sdcard/Download/owobot.py ~/owobot/owobot.py
@@ -415,7 +424,7 @@ else
     exit 1
 fi
 
-if curl -sL -f "$RAW_BASE/webpanel.py" -o ~/owobot/webpanel.py 2>/dev/null; then
+if curl -sL -f "$RAW_BASE/webpanel.py$CB" -o ~/owobot/webpanel.py 2>/dev/null; then
     echo "      ✅ webpanel.py diambil dari GitHub!"
 elif [ -f /sdcard/Download/webpanel.py ]; then
     cp /sdcard/Download/webpanel.py ~/owobot/webpanel.py
@@ -430,7 +439,7 @@ else
     exit 1
 fi
 
-if curl -sL -f "$RAW_BASE/webhook_utils.py" -o ~/owobot/webhook_utils.py 2>/dev/null; then
+if curl -sL -f "$RAW_BASE/webhook_utils.py$CB" -o ~/owobot/webhook_utils.py 2>/dev/null; then
     echo "      ✅ webhook_utils.py diambil dari GitHub!"
 elif [ -f /sdcard/Download/webhook_utils.py ]; then
     cp /sdcard/Download/webhook_utils.py ~/owobot/webhook_utils.py
@@ -445,7 +454,7 @@ else
     exit 1
 fi
 
-if curl -sL -f "$RAW_BASE/stories.txt" -o ~/owobot/stories.txt 2>/dev/null; then
+if curl -sL -f "$RAW_BASE/stories.txt$CB" -o ~/owobot/stories.txt 2>/dev/null; then
     echo "      ✅ stories.txt diambil dari GitHub!"
 elif [ -f /sdcard/Download/stories.txt ]; then
     cp /sdcard/Download/stories.txt ~/owobot/stories.txt
@@ -463,14 +472,14 @@ mkdir -p "$BIN_DIR"
 cat > "$BIN_DIR/owo" << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 mkdir -p ~/owobot
-curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh" -o ~/owobot/setup.sh 2>/dev/null
+curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh?t=$(date +%s)" -o ~/owobot/setup.sh 2>/dev/null
 bash ~/owobot/setup.sh
 EOF
 
 cat > "$BIN_DIR/owostart" << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 mkdir -p ~/owobot
-curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh" -o ~/owobot/setup.sh 2>/dev/null
+curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh?t=$(date +%s)" -o ~/owobot/setup.sh 2>/dev/null
 bash ~/owobot/setup.sh start
 EOF
 

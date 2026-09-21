@@ -152,8 +152,7 @@ if [ "$BATT" == "n" ] || [ "$BATT" == "N" ]; then
 fi
 echo ""
 
-# Gerbang password - sebelum masuk ke config akun
-check_password_gate
+# (Gerbang password dipindah ke paling akhir, tepat sebelum bot benar-benar start)
 
 # Helper: tampilkan token secara ringkas (tidak full, biar aman dilihat)
 mask_token() {
@@ -520,49 +519,14 @@ cat > "$BIN_DIR/owoweb" << 'EOF'
 am start -a android.intent.action.VIEW -d http://127.0.0.1:8765/
 EOF
 
-cat > "$BIN_DIR/owosetpw" << 'EOF'
-#!/data/data/com.termux/files/usr/bin/bash
-# Set/ganti password bot TANPA perlu ngetik echo/sha256sum manual.
-# Sengaja TIDAK dimasukin ke daftar menu shortcut biar nggak ketahuan orang lain.
-mkdir -p ~/owobot
-
-CURRENT_HASH_FILE=~/owobot/.password_config
-if [ -f "$CURRENT_HASH_FILE" ]; then
-    OLD_HASH=$(grep -oE '[a-fA-F0-9]{64}' "$CURRENT_HASH_FILE" 2>/dev/null | head -n1)
-    if [ -n "$OLD_HASH" ]; then
-        read -p "🔑 Masukkan password LAMA dulu (verifikasi): " OLD_INPUT
-        echo ""
-        if [ "$OLD_INPUT" != "$OLD_HASH" ]; then
-            echo "⛔ Password lama salah. Tidak diizinkan ganti password."
-            exit 1
-        fi
-    fi
-fi
-
-read -p "🔑 Ketik password baru: " P1
-echo ""
-read -p "🔑 Ulangi password baru: " P2
-echo ""
-if [ "$P1" != "$P2" ] || [ -z "$P1" ]; then
-    echo "⚠️  Password tidak cocok atau kosong. Dibatalkan, tidak ada yang diubah."
-    exit 1
-fi
-HASH=$(echo -n "$P1" | sha256sum | awk '{print $1}')
-echo "$HASH" > ~/owobot/.password_config
-rm -f ~/owobot/.auth_set_time ~/owobot/.auth_last_login
-echo "✅ Password berhasil diset."
-echo ""
-echo "Hash buat dibagikan ke orang lain (kalau mau kasih akses ke mereka):"
-echo "$HASH"
-EOF
-
-chmod +x "$BIN_DIR/owo" "$BIN_DIR/owostart" "$BIN_DIR/owolog" "$BIN_DIR/owostop" "$BIN_DIR/oworeset" "$BIN_DIR/owoweb" "$BIN_DIR/owosetpw"
+chmod +x "$BIN_DIR/owo" "$BIN_DIR/owostart" "$BIN_DIR/owolog" "$BIN_DIR/owostop" "$BIN_DIR/oworeset" "$BIN_DIR/owoweb"
 
 echo ""
 echo "=================================="
 echo "  Setup selesai! Memulai bot..."
 echo "=================================="
 echo ""
+check_password_gate
 termux-wake-lock
 cd ~/owobot && nohup python owobot.py > ~/owobot/bot.log 2>&1 &
 echo ""

@@ -2,28 +2,17 @@
 
 # ============================================================
 # Gerbang password sebelum bot dijalankan
-# - Hash password TIDAK disimpan di repo GitHub sama sekali.
+# - Hash password (SHA256) TIDAK disimpan di repo GitHub sama sekali.
 # - Disimpan di file lokal: ~/owobot/.password_config
 #   (file ini TIDAK pernah ikut ter-download/ter-timpa oleh curl setup.sh,
 #    jadi aman biar nggak ke-push ke GitHub)
 #
-# CARA SET PERTAMA KALI DI SETIAP HP (cuma OWNER yang tahu caranya):
-#   1. Generate hash-nya (cara apa saja, misal):
-#      echo -n "rahasiakamu" | sha256sum
-#   2. Copy HASH-nya saja (64 karakter di depan, sebelum spasi/tanda minus)
-#   3. Tulis hash polos itu ke file (tidak perlu nano, cukup 1 command):
-#      echo "HASH_YANG_TADI" > ~/owobot/.password_config
+# Cara set/ganti password diatur TERPISAH oleh owner sendiri,
+# tidak ada perintahnya di file ini sama sekali — supaya orang lain
+# yang pakai/lihat setup.sh ini tidak bisa bikin password sendiri.
 #
-#   File itu isinya cuma hash polos (64 karakter), bukan variabel,
-#   bukan PW="...", bukan apa-apa lagi selain hash-nya sendiri.
-#
-# PENTING: yang diketik orang lain di prompt "MASUKAN PASSWORD BOT"
-# adalah HASH POLOS itu sendiri (bukan kalimat aslinya) — jadi ownerlah
-# yang bagikan langsung string hash tadi ke orang yang diizinkan,
-# lalu orang itu cukup paste hash-nya persis di prompt tsb.
-#
-# Orang yang mau pakai bot HARUS minta hash itu ke owner dulu —
-# tidak bisa bikin password sendiri lewat setup.sh.
+# Orang yang mau pakai bot cukup diberi PASSWORD ASLINYA (bukan hash)
+# oleh owner, lalu ketik itu di prompt "MASUKAN PASSWORD BOT".
 #
 # - Login berlaku 24 jam (nggak ditanya lagi kalau masih dalam 1 hari)
 # - Tiap 7 hari, wajib login ulang walau sesi harian masih aktif (checkpoint tambahan)
@@ -69,9 +58,10 @@ check_password_gate() {
 
     TRIES=0
     while [ "$TRIES" -lt 3 ]; do
-        read -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
+        read -s -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
         echo ""
-        if [ "$INPUT_PASS" == "$MASTER_PASSWORD_HASH" ]; then
+        INPUT_HASH=$(echo -n "$INPUT_PASS" | sha256sum | awk '{print $1}')
+        if [ "$INPUT_HASH" == "$MASTER_PASSWORD_HASH" ]; then
             echo "$NOW" > "$AUTH_LOGIN_FILE"
             echo "$NOW" > "$AUTH_SET_FILE"
             return 0
@@ -83,6 +73,53 @@ check_password_gate() {
     echo "⛔ Gagal 3x, bot tidak dijalankan."
     exit 1
 }
+
+# Buat command asli di $PREFIX/bin (selalu ada di PATH, tidak bergantung .bashrc/login-shell)
+BIN_DIR="$PREFIX/bin"
+mkdir -p "$BIN_DIR"
+
+cat > "$BIN_DIR/owo" << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+mkdir -p ~/owobot
+curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh?t=$(date +%s)" -o ~/owobot/setup.sh 2>/dev/null
+bash ~/owobot/setup.sh
+EOF
+
+cat > "$BIN_DIR/owostart" << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+mkdir -p ~/owobot
+curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh?t=$(date +%s)" -o ~/owobot/setup.sh 2>/dev/null
+bash ~/owobot/setup.sh start
+EOF
+
+cat > "$BIN_DIR/owolog" << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+tail -f ~/owobot/bot.log
+EOF
+
+cat > "$BIN_DIR/owostop" << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+pid=$(ps aux | grep '[o]wobot.py' | awk '{print $2}')
+if [ -n "$pid" ]; then
+    kill -9 $pid
+    echo "✅ Bot dihentikan (PID $pid)"
+else
+    echo "⚠️ Bot tidak sedang berjalan"
+fi
+EOF
+
+cat > "$BIN_DIR/oworeset" << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+rm -f ~/owobot/config.txt ~/owobot/owobot.py ~/owobot/bot.log
+echo "Reset selesai. Jalankan owo untuk setup ulang."
+EOF
+
+cat > "$BIN_DIR/owoweb" << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+am start -a android.intent.action.VIEW -d http://127.0.0.1:8765/
+EOF
+
+chmod +x "$BIN_DIR/owo" "$BIN_DIR/owostart" "$BIN_DIR/owolog" "$BIN_DIR/owostop" "$BIN_DIR/oworeset" "$BIN_DIR/owoweb"
 
 clear
 echo "=================================="
@@ -477,55 +514,7 @@ else
     echo "      ⚠️  stories.txt tidak ditemukan, bot akan pakai 2 cerita default saja."
 fi
 
-# Buat command asli di $PREFIX/bin (selalu ada di PATH, tidak bergantung .bashrc/login-shell)
-BIN_DIR="$PREFIX/bin"
-mkdir -p "$BIN_DIR"
 
-cat > "$BIN_DIR/owo" << 'EOF'
-#!/data/data/com.termux/files/usr/bin/bash
-mkdir -p ~/owobot
-curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh?t=$(date +%s)" -o ~/owobot/setup.sh 2>/dev/null
-bash ~/owobot/setup.sh
-EOF
-
-cat > "$BIN_DIR/owostart" << 'EOF'
-#!/data/data/com.termux/files/usr/bin/bash
-mkdir -p ~/owobot
-curl -sL -f "https://raw.githubusercontent.com/ramdhan981/Hidro/main/setup.sh?t=$(date +%s)" -o ~/owobot/setup.sh 2>/dev/null
-bash ~/owobot/setup.sh start
-EOF
-
-cat > "$BIN_DIR/owolog" << 'EOF'
-#!/data/data/com.termux/files/usr/bin/bash
-tail -f ~/owobot/bot.log
-EOF
-
-cat > "$BIN_DIR/owostop" << 'EOF'
-#!/data/data/com.termux/files/usr/bin/bash
-pid=$(ps aux | grep '[o]wobot.py' | awk '{print $2}')
-if [ -n "$pid" ]; then
-    kill -9 $pid
-    echo "✅ Bot dihentikan (PID $pid)"
-else
-    echo "⚠️ Bot tidak sedang berjalan"
-fi
-EOF
-
-cat > "$BIN_DIR/oworeset" << 'EOF'
-#!/data/data/com.termux/files/usr/bin/bash
-rm -f ~/owobot/config.txt ~/owobot/owobot.py ~/owobot/bot.log
-echo "Reset selesai. Jalankan owo untuk setup ulang."
-EOF
-
-cat > "$BIN_DIR/owoweb" << 'EOF'
-#!/data/data/com.termux/files/usr/bin/bash
-am start -a android.intent.action.VIEW -d http://127.0.0.1:8765/
-EOF
-
-chmod +x "$BIN_DIR/owo" "$BIN_DIR/owostart" "$BIN_DIR/owolog" "$BIN_DIR/owostop" "$BIN_DIR/oworeset" "$BIN_DIR/owoweb"
-
-echo ""
-echo "=================================="
 echo "  Setup selesai! Memulai bot..."
 echo "=================================="
 echo ""

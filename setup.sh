@@ -107,6 +107,9 @@ if [ "$1" == "start" ]; then
     fi
 fi
 
+# Gerbang password — dicek di awal, sebelum proses install dimulai
+check_password_gate
+
 # Install
 echo "[1/4] Install Python, requests & Termux tools..."
 pkg update -y -q 2>/dev/null
@@ -526,7 +529,6 @@ echo "=================================="
 echo "  Setup selesai! Memulai bot..."
 echo "=================================="
 echo ""
-check_password_gate
 termux-wake-lock
 cd ~/owobot && nohup python owobot.py > ~/owobot/bot.log 2>&1 &
 echo ""

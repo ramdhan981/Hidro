@@ -144,9 +144,6 @@ if [ "$1" == "start" ]; then
     fi
 fi
 
-# Gerbang password — dicek di awal, sebelum proses install dimulai
-check_password_gate
-
 # Install
 echo "[1/4] Install Python, requests & Termux tools..."
 pkg update -y -q 2>/dev/null
@@ -192,7 +189,8 @@ if [ "$BATT" == "n" ] || [ "$BATT" == "N" ]; then
 fi
 echo ""
 
-# (Gerbang password dipindah ke paling akhir, tepat sebelum bot benar-benar start)
+# Gerbang password — tepat setelah pertanyaan battery
+check_password_gate
 
 # Helper: tampilkan token secara ringkas (tidak full, biar aman dilihat)
 mask_token() {

@@ -58,7 +58,7 @@ check_password_gate() {
 
     TRIES=0
     while [ "$TRIES" -lt 3 ]; do
-        read -s -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
+        read -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
         echo ""
         INPUT_HASH=$(echo -n "$INPUT_PASS" | sha256sum | awk '{print $1}')
         if [ "$INPUT_HASH" == "$MASTER_PASSWORD_HASH" ]; then

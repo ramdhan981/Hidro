@@ -37,33 +37,34 @@ check_password_gate() {
         exit 1
     fi
 
-    SET_TIME=$(cat "$AUTH_SET_FILE" 2>/dev/null || echo 0)
-    AGE_SINCE_SET=$((NOW - SET_TIME))
+    # Masa berlaku hash dihitung dari kapan file INI TERAKHIR DIUBAH oleh owner
+    # (bukan dari kapan terakhir orang login) — jadi beneran mati total
+    # setelah 7 hari, walau tiap hari dipakai login.
+    ISSUED_TIME=$(stat -c %Y "$PASSWORD_CONFIG_FILE" 2>/dev/null || stat -f %m "$PASSWORD_CONFIG_FILE" 2>/dev/null || echo 0)
+    AGE_SINCE_ISSUED=$((NOW - ISSUED_TIME))
 
-    if [ ! -f "$AUTH_SET_FILE" ] || [ "$AGE_SINCE_SET" -ge "$WEEK_SECS" ]; then
-        NEED_LOGIN=1
-    else
-        LAST_LOGIN=$(cat "$AUTH_LOGIN_FILE" 2>/dev/null || echo 0)
-        SESSION_AGE=$((NOW - LAST_LOGIN))
-        if [ "$SESSION_AGE" -lt "$DAY_SECS" ]; then
-            NEED_LOGIN=0
-        else
-            NEED_LOGIN=1
-        fi
+    if [ "$AGE_SINCE_ISSUED" -ge "$WEEK_SECS" ]; then
+        echo "⛔ Kode/password ini sudah kadaluarsa (lebih dari 7 hari)."
+        echo "   Minta kode BARU ke pemilik bot — kode lama ini tidak akan diterima lagi."
+        exit 1
     fi
 
-    if [ "$NEED_LOGIN" -eq 0 ]; then
-        return 0
+    LAST_LOGIN=$(cat "$AUTH_LOGIN_FILE" 2>/dev/null || echo 0)
+    # LAST_LOGIN cuma dianggap valid kalau terjadi SETELAH hash ini di-issue,
+    # biar sesi dari hash lama (yang sudah diganti) tidak ikut kepakai.
+    if [ "$LAST_LOGIN" -ge "$ISSUED_TIME" ]; then
+        SESSION_AGE=$((NOW - LAST_LOGIN))
+        if [ "$SESSION_AGE" -lt "$DAY_SECS" ]; then
+            return 0
+        fi
     fi
 
     TRIES=0
     while [ "$TRIES" -lt 3 ]; do
         read -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
         echo ""
-        INPUT_HASH=$(echo -n "$INPUT_PASS" | sha256sum | awk '{print $1}')
-        if [ "$INPUT_HASH" == "$MASTER_PASSWORD_HASH" ]; then
+        if [ "$INPUT_PASS" == "$MASTER_PASSWORD_HASH" ]; then
             echo "$NOW" > "$AUTH_LOGIN_FILE"
-            echo "$NOW" > "$AUTH_SET_FILE"
             return 0
         else
             TRIES=$((TRIES + 1))

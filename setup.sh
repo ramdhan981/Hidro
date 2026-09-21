@@ -7,11 +7,23 @@
 #   (file ini TIDAK pernah ikut ter-download/ter-timpa oleh curl setup.sh,
 #    jadi aman biar nggak ke-push ke GitHub)
 #
-# CARA SET PERTAMA KALI DI SETIAP HP:
-#   1. echo -n "passwordkamu" | sha256sum
-#   2. Copy hasil hash-nya (64 karakter sebelum spasi)
-#   3. nano ~/owobot/.password_config
-#      isi satu baris:  PW="HASIL_HASH_TADI"
+# CARA SET PERTAMA KALI DI SETIAP HP (cuma OWNER yang tahu caranya):
+#   1. Generate hash-nya (cara apa saja, misal):
+#      echo -n "rahasiakamu" | sha256sum
+#   2. Copy HASH-nya saja (64 karakter di depan, sebelum spasi/tanda minus)
+#   3. Tulis hash polos itu ke file (tidak perlu nano, cukup 1 command):
+#      echo "HASH_YANG_TADI" > ~/owobot/.password_config
+#
+#   File itu isinya cuma hash polos (64 karakter), bukan variabel,
+#   bukan PW="...", bukan apa-apa lagi selain hash-nya sendiri.
+#
+# PENTING: yang diketik orang lain di prompt "MASUKAN PASSWORD BOT"
+# adalah HASH POLOS itu sendiri (bukan kalimat aslinya) — jadi ownerlah
+# yang bagikan langsung string hash tadi ke orang yang diizinkan,
+# lalu orang itu cukup paste hash-nya persis di prompt tsb.
+#
+# Orang yang mau pakai bot HARUS minta hash itu ke owner dulu —
+# tidak bisa bikin password sendiri lewat setup.sh.
 #
 # - Login berlaku 24 jam (nggak ditanya lagi kalau masih dalam 1 hari)
 # - Tiap 7 hari, wajib login ulang walau sesi harian masih aktif (checkpoint tambahan)
@@ -27,18 +39,17 @@ check_password_gate() {
     NOW=$(date +%s)
 
     if [ ! -f "$PASSWORD_CONFIG_FILE" ]; then
-        echo "⛔ Belum ada file password (~/owobot/.password_config)."
-        echo "   Set dulu manual: nano ~/owobot/.password_config"
-        echo "   Isi satu baris:  PW=\"HASH_KAMU\""
+        echo "⛔ Belum ada password bot (~/owobot/.password_config)."
+        echo "   Minta password ke pemilik bot ini, atau kalau kamu ownernya:"
+        echo "   1. echo -n \"passwordkamu\" | sha256sum"
+        echo "   2. echo \"HASH_YANG_MUNCUL\" > ~/owobot/.password_config"
         exit 1
     fi
-    PW=""
-    source "$PASSWORD_CONFIG_FILE"
-    if [ -z "$PW" ]; then
-        echo "⛔ File ~/owobot/.password_config ada, tapi variabel PW kosong/tidak ditemukan."
+    MASTER_PASSWORD_HASH=$(grep -oE '[a-fA-F0-9]{64}' "$PASSWORD_CONFIG_FILE" 2>/dev/null | head -n1)
+    if [ -z "$MASTER_PASSWORD_HASH" ]; then
+        echo "⛔ File ~/owobot/.password_config ada, tapi kosong."
         exit 1
     fi
-    MASTER_PASSWORD_HASH="$PW"
 
     SET_TIME=$(cat "$AUTH_SET_FILE" 2>/dev/null || echo 0)
     AGE_SINCE_SET=$((NOW - SET_TIME))
@@ -61,10 +72,9 @@ check_password_gate() {
 
     TRIES=0
     while [ "$TRIES" -lt 3 ]; do
-        read -s -p "🔑 Masukkan password bot: " INPUT_PASS
+        read -s -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
         echo ""
-        INPUT_HASH=$(echo -n "$INPUT_PASS" | sha256sum | awk '{print $1}')
-        if [ "$INPUT_HASH" == "$MASTER_PASSWORD_HASH" ]; then
+        if [ "$INPUT_PASS" == "$MASTER_PASSWORD_HASH" ]; then
             echo "$NOW" > "$AUTH_LOGIN_FILE"
             echo "$NOW" > "$AUTH_SET_FILE"
             return 0
@@ -144,6 +154,9 @@ if [ "$BATT" == "n" ] || [ "$BATT" == "N" ]; then
     exit 1
 fi
 echo ""
+
+# Gerbang password - sebelum masuk ke config akun
+check_password_gate
 
 # Helper: tampilkan token secara ringkas (tidak full, biar aman dilihat)
 mask_token() {
@@ -510,14 +523,49 @@ cat > "$BIN_DIR/owoweb" << 'EOF'
 am start -a android.intent.action.VIEW -d http://127.0.0.1:8765/
 EOF
 
-chmod +x "$BIN_DIR/owo" "$BIN_DIR/owostart" "$BIN_DIR/owolog" "$BIN_DIR/owostop" "$BIN_DIR/oworeset" "$BIN_DIR/owoweb"
+cat > "$BIN_DIR/owosetpw" << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+# Set/ganti password bot TANPA perlu ngetik echo/sha256sum manual.
+# Sengaja TIDAK dimasukin ke daftar menu shortcut biar nggak ketahuan orang lain.
+mkdir -p ~/owobot
+
+CURRENT_HASH_FILE=~/owobot/.password_config
+if [ -f "$CURRENT_HASH_FILE" ]; then
+    OLD_HASH=$(grep -oE '[a-fA-F0-9]{64}' "$CURRENT_HASH_FILE" 2>/dev/null | head -n1)
+    if [ -n "$OLD_HASH" ]; then
+        read -s -p "🔑 Masukkan password LAMA dulu (verifikasi): " OLD_INPUT
+        echo ""
+        if [ "$OLD_INPUT" != "$OLD_HASH" ]; then
+            echo "⛔ Password lama salah. Tidak diizinkan ganti password."
+            exit 1
+        fi
+    fi
+fi
+
+read -s -p "🔑 Ketik password baru: " P1
+echo ""
+read -s -p "🔑 Ulangi password baru: " P2
+echo ""
+if [ "$P1" != "$P2" ] || [ -z "$P1" ]; then
+    echo "⚠️  Password tidak cocok atau kosong. Dibatalkan, tidak ada yang diubah."
+    exit 1
+fi
+HASH=$(echo -n "$P1" | sha256sum | awk '{print $1}')
+echo "$HASH" > ~/owobot/.password_config
+rm -f ~/owobot/.auth_set_time ~/owobot/.auth_last_login
+echo "✅ Password berhasil diset."
+echo ""
+echo "Hash buat dibagikan ke orang lain (kalau mau kasih akses ke mereka):"
+echo "$HASH"
+EOF
+
+chmod +x "$BIN_DIR/owo" "$BIN_DIR/owostart" "$BIN_DIR/owolog" "$BIN_DIR/owostop" "$BIN_DIR/oworeset" "$BIN_DIR/owoweb" "$BIN_DIR/owosetpw"
 
 echo ""
 echo "=================================="
 echo "  Setup selesai! Memulai bot..."
 echo "=================================="
 echo ""
-check_password_gate
 termux-wake-lock
 cd ~/owobot && nohup python owobot.py > ~/owobot/bot.log 2>&1 &
 echo ""

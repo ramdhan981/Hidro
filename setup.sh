@@ -72,7 +72,7 @@ check_password_gate() {
 
     TRIES=0
     while [ "$TRIES" -lt 3 ]; do
-        read -s -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
+        read -p "🔑 MASUKAN PASSWORD BOT: " INPUT_PASS
         echo ""
         if [ "$INPUT_PASS" == "$MASTER_PASSWORD_HASH" ]; then
             echo "$NOW" > "$AUTH_LOGIN_FILE"
@@ -533,7 +533,7 @@ CURRENT_HASH_FILE=~/owobot/.password_config
 if [ -f "$CURRENT_HASH_FILE" ]; then
     OLD_HASH=$(grep -oE '[a-fA-F0-9]{64}' "$CURRENT_HASH_FILE" 2>/dev/null | head -n1)
     if [ -n "$OLD_HASH" ]; then
-        read -s -p "🔑 Masukkan password LAMA dulu (verifikasi): " OLD_INPUT
+        read -p "🔑 Masukkan password LAMA dulu (verifikasi): " OLD_INPUT
         echo ""
         if [ "$OLD_INPUT" != "$OLD_HASH" ]; then
             echo "⛔ Password lama salah. Tidak diizinkan ganti password."
@@ -542,9 +542,9 @@ if [ -f "$CURRENT_HASH_FILE" ]; then
     fi
 fi
 
-read -s -p "🔑 Ketik password baru: " P1
+read -p "🔑 Ketik password baru: " P1
 echo ""
-read -s -p "🔑 Ulangi password baru: " P2
+read -p "🔑 Ulangi password baru: " P2
 echo ""
 if [ "$P1" != "$P2" ] || [ -z "$P1" ]; then
     echo "⚠️  Password tidak cocok atau kosong. Dibatalkan, tidak ada yang diubah."

@@ -39,10 +39,7 @@ check_password_gate() {
     NOW=$(date +%s)
 
     if [ ! -f "$PASSWORD_CONFIG_FILE" ]; then
-        echo "⛔ Belum ada password bot (~/owobot/.password_config)."
-        echo "   Minta password ke pemilik bot ini, atau kalau kamu ownernya:"
-        echo "   1. echo -n \"passwordkamu\" | sha256sum"
-        echo "   2. echo \"HASH_YANG_MUNCUL\" > ~/owobot/.password_config"
+        echo "⛔ Bot ini terkunci. Minta password ke pemilik bot untuk membuka akses."
         exit 1
     fi
     MASTER_PASSWORD_HASH=$(grep -oE '[a-fA-F0-9]{64}' "$PASSWORD_CONFIG_FILE" 2>/dev/null | head -n1)

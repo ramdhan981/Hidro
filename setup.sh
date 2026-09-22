@@ -136,8 +136,6 @@ if [ "$1" == "start" ]; then
         termux-wake-lock
         cd ~/owobot && nohup python owobot.py > ~/owobot/bot.log 2>&1 &
         echo "✅ Bot berjalan di latar belakang!"
-        echo "   Lihat log  : tail -f ~/owobot/bot.log"
-        echo "   Stop bot   : owostop"
         exit 0
     else
         echo "⚠️  File owobot.py tidak ditemukan!"

@@ -31,7 +31,7 @@ check_password_gate() {
         echo "⛔ Bot ini terkunci. Minta password ke pemilik bot untuk membuka akses."
         exit 1
     fi
-    MASTER_PASSWORD_HASH=$(grep -oE '[a-fA-F0-9]{64}' "$PASSWORD_CONFIG_FILE" 2>/dev/null | head -n1)
+    MASTER_PASSWORD_HASH=$(tr -d '[:space:]' < "$PASSWORD_CONFIG_FILE" 2>/dev/null)
     if [ -z "$MASTER_PASSWORD_HASH" ]; then
         echo "⛔ File ~/owobot/.password_config ada, tapi kosong."
         exit 1

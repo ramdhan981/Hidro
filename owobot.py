@@ -433,6 +433,15 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                     if "type the code from the image in this channel" in msg_lower:
                         return True, msg_content, image_url
 
+                    if "human verification required" in msg_lower:
+                        return True, msg_content, image_url
+
+                    if "verify you're human" in msg_lower or "verify you are human" in msg_lower:
+                        return True, msg_content, image_url
+
+                    if "wrong code" in msg_lower and "tries left" in msg_lower:
+                        return True, msg_content, image_url
+
                     if "ketik code dari gambar di channel ini" in msg_lower:
                         return True, msg_content, image_url
 
@@ -508,6 +517,13 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                         if not (author.get("bot") and BOT_NAME in author.get("username", "").lower()):
                             continue
                         text = msg.get("content", "")
+                        for emb in msg.get("embeds", []):
+                            text += " " + emb.get("title", "")
+                            text += " " + emb.get("description", "")
+                            footer = emb.get("footer", {}) or {}
+                            text += " " + footer.get("text", "")
+                            for field in emb.get("fields", []):
+                                text += " " + field.get("name", "") + " " + field.get("value", "")
                         if "inventory" in text.lower() or "=" in text:
                             inv_text = text
                             break

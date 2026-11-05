@@ -14,7 +14,7 @@ EMOJI_RUNNING = "<a:zgreen:1482033962561048778>"
 EMOJI_ALERT = "<a:blue_siren:1524500887391699044>"
 
 
-def build_embed(state, label, profile_name, gem_check_interval=20, vote_enabled=True):
+def build_embed(state, label, profile_name, gem_check_interval=20, vote_enabled=True, avatar_url=None):
     elapsed = str(datetime.now() - state["start_time"]).split(".")[0]
     log_text = "".join(f"{l}\n" for l in state["action_log"]) or "Belum ada aksi..."
     if state.get("gem_enabled", True):
@@ -50,18 +50,24 @@ def build_embed(state, label, profile_name, gem_check_interval=20, vote_enabled=
 
     status_emoji = EMOJI_RUNNING if "aktif" in state["pause_status"].lower() else EMOJI_STOP
 
-    return {
-        "title": f"{status_emoji} OWO BOT — {profile_name}",
+    embed = {
+        "title": f"{status_emoji} OWOBOT",
         "color": state["embed_color"],
         "description": f"**🆔 Akun:** `{label}`\n**👤 Profil:** {profile_name}",
         "fields": fields,
         "footer": {"text": f"🕒 {datetime.now().strftime('%H:%M:%S')} • {label}"}
     }
+    # Nama Discord + foto profil tampil di atas judul
+    author = {"name": profile_name}
+    if avatar_url:
+        author["icon_url"] = avatar_url
+    embed["author"] = author
+    return embed
 
 
-def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_check_interval=20, vote_enabled=True):
+def send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, gem_check_interval=20, vote_enabled=True, avatar_url=None):
     try:
-        embed = build_embed(state, label, profile_name, gem_check_interval, vote_enabled)
+        embed = build_embed(state, label, profile_name, gem_check_interval, vote_enabled, avatar_url)
         if state["webhook_msg_url"] is None:
             resp = safe_request("POST", WEBHOOK_URL + "?wait=true", json={"embeds": [embed]}, max_wait=20)
             if resp and resp.status_code in (200, 201):

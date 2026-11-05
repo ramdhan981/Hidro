@@ -328,7 +328,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             state["action_log"].pop(0)
 
     def send_webhook():
-        webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, GEM_CHECK_INTERVAL, VOTE_ENABLED)
+        webhook_utils.send_webhook(state, WEBHOOK_URL, label, profile_name, safe_request, GEM_CHECK_INTERVAL, VOTE_ENABLED, avatar_url)
 
     def send_alert(msg_content, image_url=None, is_test=False):
         webhook_utils.send_alert(

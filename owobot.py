@@ -236,6 +236,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         "gems_use": "",
         "is_paused": False,
         "stop_requested": False,
+        "cmd_baseline_id": "0",
         "last_vote_time": None,
         "vote_status": "Belum dicek" if VOTE_ENABLED else "🚫 Dinonaktifkan",
         "gem_enabled": GEM_CHECK_ENABLED,
@@ -462,10 +463,14 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         state["pause_status"] = "🚨 CAPTCHA - Verifikasi manual dulu!"
         state["embed_color"] = 0xFF0000
         send_webhook()
-        while state["is_paused"] and not shutdown_event.is_set():
+        while state["is_paused"] and not shutdown_event.is_set() and not state["stop_requested"]:
             time.sleep(5)
             send_webhook()
-            if check_discord_cmd() == "start":
+            c2 = check_discord_cmd()
+            if c2 == "stop":
+                stop_bot_cmd()
+                break
+            if c2 == "start":
                 state["is_paused"] = False
                 state["pause_status"] = "🟢 Aktif"
                 state["embed_color"] = 0x57F287
@@ -478,16 +483,41 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
         try:
             r = safe_request("GET", f"{URL}?limit=5", headers=headers, timeout=10, max_wait=20)
             if r and r.status_code == 200:
+                base = state.get("cmd_baseline_id", "0")
                 for msg in r.json():
+                    try:
+                        if base != "0" and int(msg.get("id", "0")) <= int(base):
+                            continue
+                    except ValueError:
+                        pass
                     text = msg.get("content", "").strip().lower()
                     uid = msg.get("author", {}).get("id", "")
                     if uid == PING_USER_ID:
                         if text == ".stopbot": return "stop"
+                        if text == ".pausebot": return "pause"
                         if text == ".startbot": return "start"
                         if text == ".testalert": return "testalert"
         except Exception:
             pass
         return None
+
+    def stop_bot_cmd():
+        """.stopbot — hentikan bot total (thread akun ini berhenti)."""
+        state["stop_requested"] = True
+        state["is_paused"] = False
+        state["pause_status"] = "⛔ Bot telah dihentikan"
+        state["embed_color"] = 0xFF0000
+        log("🛑 .stopbot diterima — bot dihentikan")
+        send_webhook()
+        safe_request("POST", URL, json={"content": "🛑 Bot sudah berhenti"}, headers=headers)
+
+    def pause_bot_cmd():
+        """.pausebot — pause sementara, lanjut dengan .startbot."""
+        state["is_paused"] = True
+        state["pause_status"] = "🔴 PAUSED"
+        state["embed_color"] = 0xFF0000
+        safe_request("POST", URL, json={"content": "⏸️ Bot di-pause! Ketik `.startbot` untuk lanjut."}, headers=headers)
+        send_webhook()
 
     def get_inventory_and_equip(force=False):
         if not GEM_CHECK_ENABLED:
@@ -703,6 +733,10 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 if detected:
                     send_alert(tmsg, image_url=timg)
                     sys.exit()
+                if total_secs >= 60 and remaining % 10 == 0:
+                    if check_discord_cmd() == "stop":
+                        stop_bot_cmd()
+                        return
             time.sleep(1)
             remaining -= 1
         state["pause_status"] = "🟢 Aktif"
@@ -710,6 +744,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
 
     # ========================================================
     print(f"{label} ({profile_name}) Mulai berjalan...")
+    state["cmd_baseline_id"] = get_last_msg_id()
     get_inventory_and_equip()
     auto_daily()
     auto_check_cash()
@@ -722,12 +757,11 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 continue
 
             cmd = check_discord_cmd()
-            if cmd == "stop" and not state["is_paused"]:
-                state["is_paused"] = True
-                state["pause_status"] = "🔴 PAUSED"
-                state["embed_color"] = 0xFF0000
-                safe_request("POST", URL, json={"content": "⏸️ Bot di-pause! Ketik `.startbot` untuk lanjut."}, headers=headers)
-                send_webhook()
+            if cmd == "stop":
+                stop_bot_cmd()
+                break
+            if cmd == "pause" and not state["is_paused"]:
+                pause_bot_cmd()
 
             if cmd == "testalert":
                 log("🧪 .testalert diterima — mengirim alert percobaan...")
@@ -747,7 +781,11 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
                 if paused_ticks % 10 != 0:
                     continue
                 send_webhook()
-                if check_discord_cmd() == "start":
+                c2 = check_discord_cmd()
+                if c2 == "stop":
+                    stop_bot_cmd()
+                    break
+                if c2 == "start":
                     state["is_paused"] = False
                     state["pause_status"] = "🟢 Aktif"
                     state["embed_color"] = 0x57F287
@@ -822,7 +860,7 @@ def jalankan_bot(acc_id, TOKEN, CHANNEL_ID, WEBHOOK_URL, PING_USER_ID):
             state["pause_status"] = "⛔ Bot telah dihentikan"
             state["embed_color"] = 0xFF0000
             send_webhook()
-            print(f"\n{label} Dihentikan (stop manual dari panel web).")
+            print(f"\n{label} Dihentikan (stop manual: panel web atau .stopbot).")
             return
 
     except KeyboardInterrupt:
@@ -1007,7 +1045,7 @@ print(f"  • Prefix     : {PREFIX}")
 print(f"  • Bot Name   : {BOT_NAME} (dipakai untuk deteksi balasan)")
 print(f"  • Jeda H+B   : {JEDA_MIN}-{JEDA_MAX} detik acak")
 print(f"  • Long Break : {LONG_BREAK_MIN}-{LONG_BREAK_MAX} menit acak (tiap {LONG_BREAK_TRIGGER} H+B), tidak kirim cerita saat break")
-print("  • .stopbot / .startbot di Discord (per akun)")
+print("  • .pausebot / .startbot / .stopbot (stop total) di Discord (per akun)")
 print("  • .testalert di Discord untuk tes notifikasi captcha (per akun)")
 print("  • .stopbot / .startbot / exit di terminal (semua akun)")
 print("  • CTRL+C juga bisa untuk berhenti")
